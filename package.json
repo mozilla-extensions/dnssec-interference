@@ -1,0 +1,19 @@
+{
+  "name": "dnssec-study",
+  "version": "0.0.1",
+  "description": "DNSSEC Interference Study",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahounsel/dnssec-interference.git"
+  },
+  "author": "Austin Hounsel",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/ahounsel/dnssec-interference/issues"
+  },
+  "homepage": "https://github.com/ahounse/dnssec-interference#readme",
+  "dependencies": {
+    "dns-packet": "^5.2.1"
+  },
+  "devDependencies": {}
+}
