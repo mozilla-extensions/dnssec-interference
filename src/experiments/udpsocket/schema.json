@@ -1,0 +1,15 @@
+[
+  {
+    "namespace": "experiments.udpsocket",
+    "description": "UDP Client Socket implementation",
+    "functions": [
+      {
+        "name": "connect",
+        "type": "function",
+        "description": "This method initializes a UDP socket.",
+        "parameters": [],
+        "async": true
+      }
+    ]
+  }
+]

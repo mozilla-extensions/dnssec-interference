@@ -25,5 +25,13 @@
   },
 
   "experiment_apis": {
+    "udpsocket": {
+      "schema": "experiments/udpsocket/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "paths": [["experiments", "udpsocket"]],
+        "script": "experiments/udpsocket/api.js"
+      }
+    }
   }
 }
