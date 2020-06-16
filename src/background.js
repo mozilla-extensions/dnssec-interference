@@ -2257,9 +2257,8 @@ ip.fromLong = function(ipl) {
 };
 
 },{"buffer":10,"os":12}],8:[function(require,module,exports){
-/* exported test */
-
 const dnsPacket = require('dns-packet');
+
 
 function test() {
     const buf = dnsPacket.encode({
@@ -2269,11 +2268,18 @@ function test() {
         questions: [{
             type: 'A',
             name: 'google.com'
-        }]
+        }],
+        additionals: [{
+            type: 'OPT',
+            name: '.',
+            udpPayloadSize: 1024,
+            flags: dnsPacket.DNSSEC_OK
+        }],
     });
-    console.log(buf);
+    console.log(buf)
     console.log(dnsPacket.decode(buf));
 };
+
 
 test();
 
