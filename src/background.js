@@ -2,8 +2,11 @@
 
 const rollout = {
     async test() {
-        let result = await browser.experiments.udpsocket.connect();
-        console.log(result);
+        try {
+            await browser.experiments.udpsocket.connect();
+        } catch(e) {
+            console.log(e);
+        }
     }
 }
 
