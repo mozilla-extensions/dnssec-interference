@@ -15,12 +15,22 @@ var udpsocket = class udpsocket extends ExtensionAPI {
     return {
       experiments: {
         udpsocket: {
-          async connect() {
+          async connect(buf, callback) {
             socket.init(-1, false, Services.scriptSecurityManager.getSystemPrincipal());
             console.log("UDP socket initialized on port " + socket.port);
-            socket.close();
-            console.log("UDP socket closed");
-          },
+
+            socket.asyncListen({
+                QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
+                onPacketReceived(aSocket, aMessage) {
+                    console.log(aMessage.rawData);
+                    socket.close();
+                },
+                onStopListening(aSocket, aStatus) {},
+            });
+
+            let written = socket.send("8.8.8.8", 53, buf);
+            console.log(written);
+          }
         },
       },
     };
