@@ -2,16 +2,42 @@
   {
     "namespace": "experiments.udpsocket",
     "description": "UDP Client Socket implementation",
+    "events": [
+        {
+            "name": "onSomething",
+            "type": "function",
+            "description": "Description of the event",
+            "parameters": [
+                {
+                    "name": "param1",
+                    "type": "any",
+                    "description": "Description of the first callback parameter"
+                }
+            ]
+        }
+    ],
     "functions": [
       {
         "name": "connect",
         "type": "function",
         "description": "This method initializes a UDP socket.",
+        "parameters": [],
+        "async": true
+      },
+      {
+        "name": "send",
+        "type": "function",
+        "description": "This method initializes a UDP socket.",
         "parameters": [
+            {
+                "type": "string",
+                "name": "addr",
+                "description": "Address of DNS recurisve resolver"
+            },
             {
                 "type": "any",
                 "name": "buf",
-                "description": "DNS packet encoded into a byte array"
+                "description": "DNS packet to send as a byte array"
             }
         ],
         "async": true
