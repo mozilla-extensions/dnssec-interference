@@ -4,14 +4,14 @@
     "description": "UDP Client Socket implementation",
     "events": [
         {
-            "name": "onSomething",
+            "name": "onDNSResponseReceived",
             "type": "function",
             "description": "Description of the event",
             "parameters": [
                 {
-                    "name": "param1",
+                    "name": "responseBytes",
                     "type": "any",
-                    "description": "Description of the first callback parameter"
+                    "description": "DNS response packet in bytes"
                 }
             ]
         }
@@ -25,14 +25,14 @@
         "async": true
       },
       {
-        "name": "send",
+        "name": "sendDNSQuery",
         "type": "function",
         "description": "This method initializes a UDP socket.",
         "parameters": [
             {
                 "type": "string",
                 "name": "addr",
-                "description": "Address of DNS recurisve resolver"
+                "description": "Address of DNS recursive resolver"
             },
             {
                 "type": "any",

@@ -2260,32 +2260,46 @@ ip.fromLong = function(ipl) {
 /* global browser */
 const dnsPacket = require("dns-packet");
 
+var query;
+var result;
+
 const rollout = {
-    async test() {
+    async sendQuery(domain) {
         const buf = dnsPacket.encode({
             type: 'query',
             id: 1,
             flags: dnsPacket.RECURSION_DESIRED,
             questions: [{
                 type: 'A',
-                name: 'google.com'
+                name: domain
             }]
         });
-        console.log(buf)
-        console.log(dnsPacket.decode(buf));
+        query = buf;
+        console.log('Query bytes');
+        console.log(query);
+        console.log('Query decoded');
+        console.log(dnsPacket.decode(query));
 
         await browser.experiments.udpsocket.connect();
-        browser.experiments.udpsocket.onSomething.addListener(this.test2);
-        await browser.experiments.udpsocket.send("8.8.8.8", buf);
+        browser.experiments.udpsocket.onDNSResponseReceived.addListener(
+            this.processDNSResponse);
+        await browser.experiments.udpsocket.sendDNSQuery("8.8.8.8", buf);
     },
 
-    test2(param1) {
-        console.log(param1);
+    processDNSResponse(responseBytes) {
+        Object.setPrototypeOf(responseBytes, query.__proto__);
+        console.log('Response bytes')
+        console.log(responseBytes);
+        console.log('Response decoded');
+        console.log(dnsPacket.decode(responseBytes));
     }
 }
 
-rollout.test();
+async function init(domain) {
+    await rollout.sendQuery(domain);
+}
 
+init('nytimes.com');
 
 },{"dns-packet":2}],9:[function(require,module,exports){
 'use strict'

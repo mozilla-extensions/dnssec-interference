@@ -21,7 +21,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
             console.log("UDP socket initialized on port " + socket.port);
           },
 
-          onSomething: new EventManager({
+          onDNSResponseReceived: new EventManager({
               context,
               name: "experiments.udpsocket.onSomething",
               register: fire => {
@@ -42,7 +42,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               }
           }).api(),
 
-          async send(addr, buf) {
+          async sendDNSQuery(addr, buf) {
               let written = socket.send(addr, 53, buf);
               console.log(written);
           }
