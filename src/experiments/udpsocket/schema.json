@@ -18,11 +18,11 @@
     ],
     "functions": [
       {
-        "name": "connect",
+        "name": "openSocket",
         "type": "function",
         "description": "This method initializes a UDP socket.",
         "parameters": [],
-        "async": true
+        "async": false
       },
       {
         "name": "sendDNSQuery",
@@ -40,7 +40,14 @@
                 "description": "DNS packet to send as a byte array"
             }
         ],
-        "async": true
+        "async": false
+      },
+      {
+        "name": "closeSocket",
+        "type": "function",
+        "description": "This method closes a UDP socket.",
+        "parameters": [],
+        "async": false 
       }
     ]
   }

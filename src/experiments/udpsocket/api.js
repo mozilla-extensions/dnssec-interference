@@ -16,14 +16,14 @@ var udpsocket = class udpsocket extends ExtensionAPI {
     return {
       experiments: {
         udpsocket: {
-          async connect() {
+          openSocket() {
             socket.init(-1, false, Services.scriptSecurityManager.getSystemPrincipal());
             console.log("UDP socket initialized on port " + socket.port);
           },
 
           onDNSResponseReceived: new EventManager({
               context,
-              name: "experiments.udpsocket.onSomething",
+              name: "experiments.udpsocket.onDNSResponseReceived",
               register: fire => {
                 const callback = value => {
                     fire.async(value);
@@ -32,12 +32,11 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                     QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
                     onPacketReceived(aSocket, aMessage) {
                         callback(aMessage.rawData);
-                        aSocket.close();
                     },
                     onStopListening(aSocket, aStatus) {},
                 });
                 return () => {
-                    // Unregister callback
+                    socket.close();
                 }
               }
           }).api(),
@@ -45,7 +44,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
           async sendDNSQuery(addr, buf) {
               let written = socket.send(addr, 53, buf);
               console.log(written);
-          }
+          },
         },
       },
     };

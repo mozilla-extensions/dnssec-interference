@@ -1,17 +1,16 @@
 /* global browser */
 const dnsPacket = require("dns-packet");
 
-var query;
-var result;
+var query_proto;
 
 const rollout = {
-    async sendQuery(domain) {
+    sendQuery(domain, record_type) {
         const buf = dnsPacket.encode({
             type: 'query',
             id: 1,
             flags: dnsPacket.RECURSION_DESIRED,
             questions: [{
-                type: 'RRSIG',
+                type: record_type,
                 name: domain
             }],
             additionals: [{
@@ -21,29 +20,26 @@ const rollout = {
                 flags: dnsPacket.DNSSEC_OK
             }]
         });
-        query = buf;
-        console.log('Query bytes');
-        console.log(query);
+        query_proto = buf.__proto__;
         console.log('Query decoded');
-        console.log(dnsPacket.decode(query));
+        console.log(dnsPacket.decode(buf));
 
-        await browser.experiments.udpsocket.connect();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(
             this.processDNSResponse);
-        await browser.experiments.udpsocket.sendDNSQuery("8.8.8.8", buf);
+        browser.experiments.udpsocket.sendDNSQuery("8.8.8.8", buf);
     },
 
     processDNSResponse(responseBytes) {
-        Object.setPrototypeOf(responseBytes, query.__proto__);
-        console.log('Response bytes')
-        console.log(responseBytes);
+        Object.setPrototypeOf(responseBytes, query_proto);
         console.log('Response decoded');
         console.log(dnsPacket.decode(responseBytes));
     }
 }
 
-async function init(domain) {
-    await rollout.sendQuery(domain);
+function init() {
+    browser.experiments.udpsocket.openSocket();
+    rollout.sendQuery('example.com', 'DNSKEY');
+    rollout.sendQuery('example.com', 'RRSIG');
 }
 
-init('example.com');
+init();
