@@ -11,8 +11,14 @@ const rollout = {
             id: 1,
             flags: dnsPacket.RECURSION_DESIRED,
             questions: [{
-                type: 'A',
+                type: 'RRSIG',
                 name: domain
+            }],
+            additionals: [{
+                type: 'OPT',
+                name: '.',
+                udpPayloadSize: 4096,
+                flags: dnsPacket.DNSSEC_OK
             }]
         });
         query = buf;
@@ -40,4 +46,4 @@ async function init(domain) {
     await rollout.sendQuery(domain);
 }
 
-init('nytimes.com');
+init('example.com');
