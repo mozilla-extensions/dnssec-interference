@@ -8,6 +8,7 @@
 * Plug in Telemetry code
 
 ## Minor TODOs ##
+* Figure out if we need to set a random ID value for the DNS request
 * Come up with better way of opening/closing sockets for the extension's
   lifetime
     * Do we want a new socket for each query?
