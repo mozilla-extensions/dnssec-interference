@@ -1,0 +1,17 @@
+[
+  {
+    "namespace": "experiments.resolvconf",
+    "description": "Read /etc/resolv.conf from disk",
+    "events": [
+    ],
+    "functions": [
+      {
+        "name": "readResolvConf",
+        "type": "function",
+        "description": "This method reads /etc/resolv.conf from disk and parses the nameserver fields",
+        "parameters": [],
+        "async": true 
+      }
+    ]
+  }
+]

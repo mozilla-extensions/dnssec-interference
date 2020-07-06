@@ -2296,6 +2296,7 @@ const rollout = {
 }
 
 function init() {
+    browser.experiments.resolvconf.readResolvConf();
     browser.experiments.udpsocket.openSocket();
     rollout.sendQuery('example.com', 'DNSKEY');
     rollout.sendQuery('example.com', 'RRSIG');

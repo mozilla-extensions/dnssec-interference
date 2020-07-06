@@ -32,6 +32,14 @@
         "paths": [["experiments", "udpsocket"]],
         "script": "experiments/udpsocket/api.js"
       }
+    },
+    "resolvconf": {
+      "schema": "experiments/resolvconf/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "paths": [["experiments", "resolvconf"]],
+        "script": "experiments/resolvconf/api.js"
+      }
     }
   }
 }
