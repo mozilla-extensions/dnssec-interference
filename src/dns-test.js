@@ -4,7 +4,7 @@ const dnsPacket = require("dns-packet");
 var query_proto;
 
 const rollout = {
-    sendQuery(domain, record_type) {
+    sendQuery(domain, nameserver, record_type) {
         const buf = dnsPacket.encode({
             type: 'query',
             id: 1,
@@ -26,7 +26,7 @@ const rollout = {
 
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(
             this.processDNSResponse);
-        browser.experiments.udpsocket.sendDNSQuery("8.8.8.8", buf);
+        browser.experiments.udpsocket.sendDNSQuery(nameserver, buf);
     },
 
     processDNSResponse(responseBytes) {
@@ -38,10 +38,21 @@ const rollout = {
 
 async function init() {
     let nameservers = await browser.experiments.resolvconf.readResolvConf();
-    console.log(nameservers);
-    browser.experiments.udpsocket.openSocket();
-    rollout.sendQuery('example.com', 'DNSKEY');
-    rollout.sendQuery('example.com', 'RRSIG');
+    if (!Array.isArray(nameservers) || nameservers.length == 0) {
+        throw "Could not read /etc/resolv.conf, or nameservers not found in file";
+    }
+    
+    let ns = nameservers[0];
+    let useIPv6 = false;
+    if (ns.includes(":")) {
+        useIPv6 = true; 
+    }
+    console.log("Nameserver chosen: " + ns);
+    browser.experiments.udpsocket.openSocket(useIPv6);
+
+    rollout.sendQuery('example.com', ns, 'A');
+    rollout.sendQuery('example.com', ns, 'DNSKEY');
+    rollout.sendQuery('example.com', ns, 'RRSIG');
 }
 
 init();

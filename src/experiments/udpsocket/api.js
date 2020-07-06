@@ -16,9 +16,16 @@ var udpsocket = class udpsocket extends ExtensionAPI {
     return {
       experiments: {
         udpsocket: {
-          openSocket() {
-            socket.init(-1, false, Services.scriptSecurityManager.getSystemPrincipal());
-            console.log("UDP socket initialized on port " + socket.port);
+          openSocket(useIPv6) {
+            let localAddr;
+            if (useIPv6 == true) {
+                localAddr = "::0";
+            } else {
+                localAddr = "0.0.0.0";
+            }
+            socket.init2(localAddr, -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
+            console.log(socket.localAddr);
+            console.log("UDP socket initialized on " + socket.localAddr + ":" + socket.port);
           },
 
           onDNSResponseReceived: new EventManager({
@@ -41,9 +48,9 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               }
           }).api(),
 
-          async sendDNSQuery(addr, buf) {
+          sendDNSQuery(addr, buf) {
               let written = socket.send(addr, 53, buf);
-              console.log(written);
+              console.log(addr, written);
           },
         },
       },

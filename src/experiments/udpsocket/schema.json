@@ -21,7 +21,13 @@
         "name": "openSocket",
         "type": "function",
         "description": "This method initializes a UDP socket.",
-        "parameters": [],
+        "parameters": [
+            {
+                "name": "useIPv6",
+                "type": "boolean",
+                "description": "True if the socket should be bound do an IPv6 address, false otherwise"
+            }
+        ],
         "async": false
       },
       {
