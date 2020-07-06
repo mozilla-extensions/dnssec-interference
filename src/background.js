@@ -2295,8 +2295,9 @@ const rollout = {
     }
 }
 
-function init() {
-    browser.experiments.resolvconf.readResolvConf();
+async function init() {
+    let nameservers = await browser.experiments.resolvconf.readResolvConf();
+    console.log(nameservers);
     browser.experiments.udpsocket.openSocket();
     rollout.sendQuery('example.com', 'DNSKEY');
     rollout.sendQuery('example.com', 'RRSIG');
