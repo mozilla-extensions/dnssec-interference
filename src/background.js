@@ -2263,7 +2263,7 @@ const dnsPacket = require("dns-packet");
 var query_proto;
 
 const rollout = {
-    sendQuery(domain, nameserver, record_type) {
+    sendQuery(domain, nameserver, record_type, useIPv4) {
         const buf = dnsPacket.encode({
             type: 'query',
             id: 1,
@@ -2285,7 +2285,7 @@ const rollout = {
 
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(
             this.processDNSResponse);
-        browser.experiments.udpsocket.sendDNSQuery(nameserver, buf);
+        browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, useIPv4);
     },
 
     processDNSResponse(responseBytes) {
@@ -2300,18 +2300,37 @@ async function init() {
     if (!Array.isArray(nameservers) || nameservers.length == 0) {
         throw "Could not read /etc/resolv.conf, or nameservers not found in file";
     }
-    
-    let ns = nameservers[0];
-    let useIPv6 = false;
-    if (ns.includes(":")) {
-        useIPv6 = true; 
+  
+    let ns_ipv4;
+    let ns_ipv6;
+    for (var i = 0; i < nameservers.length; i++) {
+        let ns = nameservers[i];
+        if (isUndefined(ns_ipv4) && !isUndefined(ns) && ns.includes(".")) {
+            ns_ipv4 = ns;
+        } else if (isUndefined(ns_ipv6) && !isUndefined(ns) && ns.includes(":")) {
+            ns_ipv6 = ns;
+        }
+        console.log(ns_ipv4 + " " + ns_ipv6);
     }
-    console.log("Nameserver chosen: " + ns);
-    browser.experiments.udpsocket.openSocket(useIPv6);
 
-    rollout.sendQuery('example.com', ns, 'A');
-    rollout.sendQuery('example.com', ns, 'DNSKEY');
-    rollout.sendQuery('example.com', ns, 'RRSIG');
+    console.log("IPv4 Nameserver chosen: " + ns_ipv4);
+    console.log("IPv6 Nameserver chosen: " + ns_ipv6);
+    browser.experiments.udpsocket.openSocket();
+
+    if (ns_ipv4) {
+        rollout.sendQuery('example.com', ns_ipv4, 'A', true);
+        rollout.sendQuery('example.com', ns_ipv4, 'DNSKEY', true);
+        rollout.sendQuery('example.com', ns_ipv4, 'RRSIG', true);
+    }
+    if (ns_ipv6) {
+        rollout.sendQuery('google.com', ns_ipv6, 'A', false);
+        rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
+        rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
+    }
+}
+
+function isUndefined(x) {
+   return (typeof(x) === 'undefined' || x === null);
 }
 
 init();

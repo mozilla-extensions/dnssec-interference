@@ -8,7 +8,8 @@ const Cu = Components.utils;
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { EventManager} = ExtensionCommon;
 
-const socket = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv6 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 
 var udpsocket = class udpsocket extends ExtensionAPI {
   getAPI(context) {
@@ -16,16 +17,11 @@ var udpsocket = class udpsocket extends ExtensionAPI {
     return {
       experiments: {
         udpsocket: {
-          openSocket(useIPv6) {
-            let localAddr;
-            if (useIPv6 == true) {
-                localAddr = "::0";
-            } else {
-                localAddr = "0.0.0.0";
-            }
-            socket.init2(localAddr, -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
-            console.log(socket.localAddr);
-            console.log("UDP socket initialized on " + socket.localAddr + ":" + socket.port);
+          openSocket() {
+            socket_ipv4.init2("0.0.0.0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
+            socket_ipv6.init2("::0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
+            console.log("IPv4 UDP socket initialized on " + socket_ipv4.localAddr.address + ":" + socket_ipv4.port);
+            console.log("IPv6 UDP socket initialized on " + socket_ipv6.localAddr.address + ":" + socket_ipv6.port);
           },
 
           onDNSResponseReceived: new EventManager({
@@ -35,7 +31,14 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                 const callback = value => {
                     fire.async(value);
                 };
-                socket.asyncListen({
+                socket_ipv4.asyncListen({
+                    QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
+                    onPacketReceived(aSocket, aMessage) {
+                        callback(aMessage.rawData);
+                    },
+                    onStopListening(aSocket, aStatus) {},
+                });
+                socket_ipv6.asyncListen({
                     QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
                     onPacketReceived(aSocket, aMessage) {
                         callback(aMessage.rawData);
@@ -43,13 +46,20 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                     onStopListening(aSocket, aStatus) {},
                 });
                 return () => {
-                    socket.close();
+                    console.log("Test");
+                    socket_ipv4.close();
+                    socket_ipv6.close();
                 }
               }
           }).api(),
 
-          sendDNSQuery(addr, buf) {
-              let written = socket.send(addr, 53, buf);
+          sendDNSQuery(addr, buf, useIPv4) {
+              let written;
+              if (useIPv4 == true) {
+                written = socket_ipv4.send(addr, 53, buf);
+              } else {
+                written = socket_ipv6.send(addr, 53, buf);
+              }
               console.log(addr, written);
           },
         },
