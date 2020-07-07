@@ -34,31 +34,33 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                 socket_ipv4.asyncListen({
                     QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
                     onPacketReceived(aSocket, aMessage) {
+                        console.log("IPv4 packet received");
                         callback(aMessage.rawData);
                     },
-                    onStopListening(aSocket, aStatus) {},
+                    onStopListening(aSocket, aStatus) {}
                 });
                 socket_ipv6.asyncListen({
                     QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
                     onPacketReceived(aSocket, aMessage) {
+                        console.log("IPv6 packet received");
                         callback(aMessage.rawData);
                     },
-                    onStopListening(aSocket, aStatus) {},
+                    onStopListening(aSocket, aStatus) {}
                 });
                 return () => {
-                    console.log("Test");
+                    console.log("Closing addon");
                     socket_ipv4.close();
                     socket_ipv6.close();
                 }
               }
           }).api(),
 
-          sendDNSQuery(addr, buf, useIPv4) {
+          async sendDNSQuery(addr, buf, useIPv4) {
               let written;
               if (useIPv4 == true) {
-                written = socket_ipv4.send(addr, 53, buf);
+                written = await socket_ipv4.send(addr, 53, buf, buf.length);
               } else {
-                written = socket_ipv6.send(addr, 53, buf);
+                written = await socket_ipv6.send(addr, 53, buf, buf.length);
               }
               console.log(addr, written);
           },

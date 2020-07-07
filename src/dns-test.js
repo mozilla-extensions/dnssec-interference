@@ -4,7 +4,7 @@ const dnsPacket = require("dns-packet");
 var query_proto;
 
 const rollout = {
-    sendQuery(domain, nameserver, record_type, useIPv4) {
+    async sendQuery(domain, nameserver, record_type, useIPv4) {
         const buf = dnsPacket.encode({
             type: 'query',
             id: 1,
@@ -24,12 +24,10 @@ const rollout = {
         console.log('Query decoded');
         console.log(dnsPacket.decode(buf));
 
-        browser.experiments.udpsocket.onDNSResponseReceived.addListener(
-            this.processDNSResponse);
-        browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, useIPv4);
+        await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, useIPv4);
     },
 
-    processDNSResponse(responseBytes) {
+    async processDNSResponse(responseBytes) {
         Object.setPrototypeOf(responseBytes, query_proto);
         console.log('Response decoded');
         console.log(dnsPacket.decode(responseBytes));
@@ -57,16 +55,17 @@ async function init() {
     console.log("IPv4 Nameserver chosen: " + ns_ipv4);
     console.log("IPv6 Nameserver chosen: " + ns_ipv6);
     browser.experiments.udpsocket.openSocket();
+    browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
 
-    if (ns_ipv4) {
-        rollout.sendQuery('example.com', ns_ipv4, 'A', true);
-        rollout.sendQuery('example.com', ns_ipv4, 'DNSKEY', true);
-        rollout.sendQuery('example.com', ns_ipv4, 'RRSIG', true);
+    if (!isUndefined(ns_ipv4)) {
+        await rollout.sendQuery('google.org', ns_ipv4, 'A', true);
+        await rollout.sendQuery('google.org', ns_ipv4, 'DNSKEY', true);
+        await rollout.sendQuery('google.org', ns_ipv4, 'RRSIG', true);
     }
-    if (ns_ipv6) {
-        rollout.sendQuery('google.com', ns_ipv6, 'A', false);
-        rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
-        rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
+    if (!isUndefined(ns_ipv6)) {
+        await rollout.sendQuery('google.com', ns_ipv6, 'A', false);
+        await rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
+        await rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
     }
 }
 
