@@ -55,12 +55,12 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               }
           }).api(),
 
-          async sendDNSQuery(addr, buf, useIPv4) {
+          sendDNSQuery(addr, buf, useIPv4) {
               let written;
               if (useIPv4 == true) {
-                written = await socket_ipv4.send(addr, 53, buf, buf.length);
+                written = socket_ipv4.send(addr, 53, buf, buf.length);
               } else {
-                written = await socket_ipv6.send(addr, 53, buf, buf.length);
+                written = socket_ipv6.send(addr, 53, buf, buf.length);
               }
               console.log(addr, written);
           },
