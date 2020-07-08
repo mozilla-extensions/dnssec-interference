@@ -12,6 +12,8 @@
       it?
 * Come up with a less-hacky way of storing the __proto__ for the object created
   by dns-packet.encode()
+* Figure out a better way to include dns-packet without using browserify to
+  create background.js
 
 ## Bugs ##
 * Figure out why we sometimes don't receive the second response when we send two
