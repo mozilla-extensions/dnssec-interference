@@ -1,8 +1,4 @@
 ## Major TODOs ##
-* Document the experiment design
-* Figure out how to read the system resolver address from disk
-    * Windows: registries (see Chrome code for registry locations)
-    * Linux: /etc/resolv.conf
 * Figure out if we can craft a request for an arbitrary record type
 * Set up a DNSSEC-signed record set for a domain name that we control
 * Plug in Telemetry code
@@ -16,3 +12,12 @@
       it?
 * Come up with a less-hacky way of storing the __proto__ for the object created
   by dns-packet.encode()
+
+## Bugs ##
+* Figure out why we sometimes don't receive the second response when we send two
+  requests over two different sockets
+
+## Completed ##
+* Document the experiment design
+* Figure out how to open a socket and send/receive DNS packets
+* Figure out how to read /etc/resolv.conf for Mac/Linux
