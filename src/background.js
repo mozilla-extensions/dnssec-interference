@@ -1300,6 +1300,49 @@ rds.encodingLength = function (digest) {
   return 6 + Buffer.byteLength(digest.digest)
 }
 
+var ruri = exports.uri = {}
+
+ruri.encode = function (data, buf, offset) {
+  // This code is not correct. It is copied. However, we don't need to encode 
+  // URI records at the moment.
+  if (!buf) buf = Buffer.allocUnsafe(ruri.encodingLength(data))
+  if (!offset) offset = 0
+
+  name.encode(data, buf, offset + 2)
+  buf.writeUInt16BE(name.encode.bytes, offset)
+  rns.encode.bytes = name.encode.bytes + 2
+  return buf
+}
+
+ruri.encode.bytes = 0
+
+ruri.decode = function (buf, offset) {
+  if (!offset) offset = 0
+  const oldOffset = offset
+
+  var a = {}
+  var length = buf.readUInt16BE(offset)
+  offset += 2
+  a.priority = buf.readUInt16BE(offset)
+  offset += 2
+  a.weight = buf.readUInt16BE(offset)
+  offset += 2
+
+  a.target = buf.toString('utf-8', offset, offset + length - 4)
+  offset += (length - 4)
+  
+  ruri.decode.bytes = offset - oldOffset
+  return a
+}
+
+ruri.decode.bytes = 0
+
+ruri.encodingLength = function (data) {
+  // This code is not correct. It is copied. However, we don't need to encode 
+  // URI records at the moment.
+  return name.encodingLength(data) + 2
+}
+
 const renc = exports.record = function (type) {
   switch (type.toUpperCase()) {
     case 'A': return ra
@@ -1322,6 +1365,8 @@ const renc = exports.record = function (type) {
     case 'NSEC': return rnsec
     case 'NSEC3': return rnsec3
     case 'DS': return rds
+    case 'URI': return ruri 
+    case 'HTTPS': return rhttps
   }
   return runknown
 }
@@ -1782,6 +1827,8 @@ exports.toString = function (type) {
     case 251: return 'IXFR'
     case 41: return 'OPT'
     case 255: return 'ANY'
+    case 256: return 'URI'
+    case 65: return 'HTTPS'
   }
   return 'UNKNOWN_' + type
 }
@@ -1833,6 +1880,8 @@ exports.toType = function (name) {
     case 'OPT': return 41
     case 'ANY': return 255
     case '*': return 255
+    case 'URI': return 256
+    case 'HTTPS': return 65
   }
   if (name.toUpperCase().startsWith('UNKNOWN_')) return parseInt(name.slice(8))
   return 0
@@ -2258,7 +2307,7 @@ ip.fromLong = function(ipl) {
 
 },{"buffer":10,"os":12}],8:[function(require,module,exports){
 /* global browser */
-const dnsPacket = require("dns-packet");
+const dnsPacket = require("dns-packet-fork");
 
 var query_proto;
 
@@ -2275,8 +2324,8 @@ const rollout = {
             additionals: [{
                 type: 'OPT',
                 name: '.',
-                udpPayloadSize: 4096,
-                flags: dnsPacket.DNSSEC_OK
+                udpPayloadSize: 4096
+                // flags: dnsPacket.DNSSEC_OK
             }]
         });
         query_proto = buf.__proto__;
@@ -2289,6 +2338,7 @@ const rollout = {
     processDNSResponse(responseBytes) {
         Object.setPrototypeOf(responseBytes, query_proto);
         console.log('Response decoded');
+        console.log(responseBytes);
         console.log(dnsPacket.decode(responseBytes));
     }
 }
@@ -2316,16 +2366,19 @@ async function init() {
     browser.experiments.udpsocket.openSocket();
     browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
 
-    if (!isUndefined(ns_ipv4)) {
-        rollout.sendQuery('google.org', ns_ipv4, 'A', true);
-        // rollout.sendQuery('google.org', ns_ipv4, 'DNSKEY', true);
-        // rollout.sendQuery('google.org', ns_ipv4, 'RRSIG', true);
-    }
-    if (!isUndefined(ns_ipv6)) {
-        rollout.sendQuery('google.com', ns_ipv6, 'A', false);
-        // rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
-        // rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
-    }
+    rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv4, 'URI', true);
+    rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
+
+    // if (!isUndefined(ns_ipv4)) {
+    //     rollout.sendQuery('google.org', ns_ipv4, 'A', true);
+    //     rollout.sendQuery('google.org', ns_ipv4, 'DNSKEY', true);
+    //     rollout.sendQuery('google.org', ns_ipv4, 'RRSIG', true);
+    // }
+    // if (!isUndefined(ns_ipv6)) {
+    //     rollout.sendQuery('google.com', ns_ipv6, 'A', false);
+    //     rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
+    //     rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
+    // }
 }
 
 function isUndefined(x) {
@@ -2334,7 +2387,7 @@ function isUndefined(x) {
 
 init();
 
-},{"dns-packet":2}],9:[function(require,module,exports){
+},{"dns-packet-fork":2}],9:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
