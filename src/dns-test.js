@@ -58,18 +58,26 @@ async function init() {
     browser.experiments.udpsocket.openSocket();
     browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
 
-    rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv4, 'URI', true);
-    rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
+    if (!isUndefined(ns_ipv4)) {
+        rollout.sendQuery('example.com', ns_ipv4, 'A', true);
+        rollout.sendQuery('example.com', ns_ipv4, 'AAAA', true);
+        rollout.sendQuery('example.com', ns_ipv4, 'RRSIG', true);
+        rollout.sendQuery('example.com', ns_ipv4, 'DNSKEY', true);
+        rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
+        // rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv4, 'URI', true);
+        // rollout.sendquery('????', ns_ipv4, 'SMIMEA', true);
+        // rollout.sendQuery('????', ns_ipv4, 'NEW', true);
+    }
 
-    // if (!isUndefined(ns_ipv4)) {
-    //     rollout.sendQuery('google.org', ns_ipv4, 'A', true);
-    //     rollout.sendQuery('google.org', ns_ipv4, 'DNSKEY', true);
-    //     rollout.sendQuery('google.org', ns_ipv4, 'RRSIG', true);
-    // }
     // if (!isUndefined(ns_ipv6)) {
-    //     rollout.sendQuery('google.com', ns_ipv6, 'A', false);
-    //     rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
-    //     rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
+        // rollout.sendQuery('example.com', ns_ipv6, 'A', false);
+        // rollout.sendQuery('example.com', ns_ipv6, 'AAAA', false);
+        // rollout.sendQuery('example.com', ns_ipv6, 'RRSIG', false);
+        // rollout.sendQuery('example.com', ns_ipv6, 'DNSKEY', false);
+        // rollout.sendQuery('cloudflare-http1.com', ns_ipv6, 'HTTPS', false);
+        // rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv6, 'URI', false);
+        // rollout.sendquery('????', ns_ipv6, 'SMIMEA', false);
+        // rollout.sendQuery('????', ns_ipv6, 'NEW', false);
     // }
 }
 
