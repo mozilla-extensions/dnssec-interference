@@ -1,5 +1,5 @@
 /* global browser */
-const dnsPacket = require("dns-packet");
+const dnsPacket = require("dns-packet-fork");
 
 var query_proto;
 
@@ -16,8 +16,8 @@ const rollout = {
             additionals: [{
                 type: 'OPT',
                 name: '.',
-                udpPayloadSize: 4096,
-                flags: dnsPacket.DNSSEC_OK
+                udpPayloadSize: 4096
+                // flags: dnsPacket.DNSSEC_OK
             }]
         });
         query_proto = buf.__proto__;
@@ -30,6 +30,7 @@ const rollout = {
     processDNSResponse(responseBytes) {
         Object.setPrototypeOf(responseBytes, query_proto);
         console.log('Response decoded');
+        console.log(responseBytes);
         console.log(dnsPacket.decode(responseBytes));
     }
 }
@@ -57,16 +58,19 @@ async function init() {
     browser.experiments.udpsocket.openSocket();
     browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
 
-    if (!isUndefined(ns_ipv4)) {
-        rollout.sendQuery('google.org', ns_ipv4, 'A', true);
-        // rollout.sendQuery('google.org', ns_ipv4, 'DNSKEY', true);
-        // rollout.sendQuery('google.org', ns_ipv4, 'RRSIG', true);
-    }
-    if (!isUndefined(ns_ipv6)) {
-        rollout.sendQuery('google.com', ns_ipv6, 'A', false);
-        // rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
-        // rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
-    }
+    rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv4, 'URI', true);
+    // rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
+
+    // if (!isUndefined(ns_ipv4)) {
+    //     rollout.sendQuery('google.org', ns_ipv4, 'A', true);
+    //     rollout.sendQuery('google.org', ns_ipv4, 'DNSKEY', true);
+    //     rollout.sendQuery('google.org', ns_ipv4, 'RRSIG', true);
+    // }
+    // if (!isUndefined(ns_ipv6)) {
+    //     rollout.sendQuery('google.com', ns_ipv6, 'A', false);
+    //     rollout.sendQuery('google.com', ns_ipv6, 'DNSKEY', false);
+    //     rollout.sendQuery('google.com', ns_ipv6, 'RRSIG', false);
+    // }
 }
 
 function isUndefined(x) {
