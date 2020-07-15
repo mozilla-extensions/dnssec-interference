@@ -1343,6 +1343,70 @@ ruri.encodingLength = function (data) {
   return name.encodingLength(data) + 2
 }
 
+var rhttps = exports.https = {}
+
+rhttps.encode = function (data, buf, offset) {
+  if (!buf) buf = Buffer.allocUnsafe(ruri.encodingLength(data))
+  if (!offset) offset = 0
+
+  name.encode(data, buf, offset + 2)
+  buf.writeUInt16BE(name.encode.bytes, offset)
+  rhttps.encode.bytes = name.encode.bytes + 2
+  return buf
+}
+
+rhttps.encode.bytes = 0
+
+rhttps.decode = function (buf, offset) {
+  if (!offset) offset = 0
+  const oldOffset = offset
+
+  var a = {}
+  var length = buf.readUInt16BE(offset)
+  offset += 2
+  a.svcpriority = buf.readUInt16BE(offset)
+  offset += 2
+  a.targetname = name.decode(buf, offset)
+  offset += name.decode.bytes
+
+  a.svcparams = []
+  var i = 0
+  while ((offset - oldOffset) < length - 2) {
+    let tmp = {}
+    tmp.key = buf.readUInt16BE(offset)
+    offset += 2
+    let svcparamvaluelength = buf.readUInt16BE(offset)
+    offset += 2
+
+    if (tmp.key == 4) {
+        tmp.value = []
+        for (let j = 0; j < (svcparamvaluelength / 4); j++) {
+            tmp.value[j] = ip.toString(buf, offset, 4)
+            offset += 4
+        }
+        a.svcparams[i] = tmp
+    }
+    else if (tmp.key == 6) {
+        tmp.value = []
+        for (let j = 0; j < (svcparamvaluelength / 16); j++) {
+            tmp.value[j] = ip.toString(buf, offset, 16)
+            offset += 16
+        }
+        a.svcparams[i] = tmp
+    }
+    i += 1
+  }
+
+  rhttps.decode.bytes = offset - oldOffset
+  return a
+}
+
+rhttps.decode.bytes = 0
+
+rhttps.encodingLength = function (data) {
+  return name.encodingLength(data) + 2
+}
+
 const renc = exports.record = function (type) {
   switch (type.toUpperCase()) {
     case 'A': return ra
