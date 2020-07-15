@@ -59,7 +59,7 @@ async function init() {
     browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
 
     rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv4, 'URI', true);
-    // rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
+    rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
 
     // if (!isUndefined(ns_ipv4)) {
     //     rollout.sendQuery('google.org', ns_ipv4, 'A', true);
