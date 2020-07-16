@@ -36,9 +36,10 @@ const rollout = {
 }
 
 async function init() {
-    // let ns = await browser.experiments.nameservers.readNameserversMac();
-    // let ns = await browser.experiments.nameservers.readNameserversWin();
-    let nameservers = ["10.8.0.5"];
+    // let nameservers = await browser.experiments.resolvconf.readNameserversMac();
+    let nameservers = await browser.experiments.resolvconf.readNameserversWin();
+    console.log(nameservers);
+
     if (!Array.isArray(nameservers) || nameservers.length == 0) {
         throw "Could not read /etc/resolv.conf, or nameservers not found in file";
     }
