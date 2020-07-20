@@ -1,5 +1,4 @@
 ## Major TODOs ##
-* Figure out if we can craft a request for an arbitrary record type
 * Set up a DNSSEC-signed record set for a domain name that we control
 * Plug in Telemetry code
 
@@ -22,4 +21,6 @@
 ## Completed ##
 * Document the experiment design
 * Figure out how to open a socket and send/receive DNS packets
-* Figure out how to read /etc/resolv.conf for Mac/Linux
+* Figure out how to read /etc/resolv.conf for list of nameservers on Mac/Linux
+* Figure out how to read registries for list of nameservers on Windows
+* Figure out if we can craft a request for an arbitrary record type
