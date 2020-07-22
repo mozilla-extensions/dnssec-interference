@@ -11,20 +11,20 @@ var resolvconf = class resolvconf extends ExtensionAPI {
     return {
       experiments: {
         resolvconf: {
-          async readNameserversMac() {
-              let string1 = await OS.File.read("/etc/resolv.conf", { "encoding": "utf-8" });
-              let lines = string1.split("\n");
+        async readNameserversMac() {
+            let string1 = await OS.File.read("/etc/resolv.conf", { "encoding": "utf-8" });
+            let lines = string1.split("\n");
 
-              let nameservers = [];
-              for (var i = 0; i < lines.length; i++) {
-                  let line = lines[i];
-                  if (line.startsWith("nameserver")) {
-                    let ns = line.split(" ")[1];
-                    nameservers.push(ns);
-                  }
-              }
-              return nameservers;
-          };
+            let nameservers = [];
+            for (var i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                if (line.startsWith("nameserver")) {
+                  let ns = line.split(" ")[1];
+                  nameservers.push(ns);
+                }
+            }
+            return nameservers;
+      },
 
 	  async readNameserversWin() {
 	       let nameservers = [];
