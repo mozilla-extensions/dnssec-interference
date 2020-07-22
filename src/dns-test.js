@@ -27,17 +27,38 @@ const rollout = {
         browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, useIPv4);
     },
 
-    processDNSResponse(responseBytes) {
+    processDNSResponse(responseBytes, usedIPv4Socket) {
+        /* 
+         * TODO: Replace first argument with the bytes that we care about
+         * TODO: Determine if the bucket should be "event" or "main", rather 
+         * than "dnssec-experiment"
+         */
+        // sendResponsePing([123], usedIPv4Socket);
+        console.log(responseBytes, usedIPv4Socket);
+
         Object.setPrototypeOf(responseBytes, query_proto);
+        decodedResponse = dnsPacket.decode(responseBytes);
         console.log('Response decoded');
-        console.log(responseBytes);
         console.log(dnsPacket.decode(responseBytes));
+
     }
 }
 
+function sendResponsePing(_responseBytes, _usedIPv4Socket) {
+    // Test ping
+    const bucket = "dnssec-experiment";
+    const options = {addClientId: true, addEnvironment: false};
+    const payload = {
+      responseBytes: _responseBytes,
+      usedIPv4Socket: _usedIPv4Socket,
+      testing: true
+    };
+    browser.telemetry.submitPing(bucket, payload, options);
+}
+
 async function init() {
-    // let nameservers = await browser.experiments.resolvconf.readNameserversMac();
-    let nameservers = await browser.experiments.resolvconf.readNameserversWin();
+    let nameservers = await browser.experiments.resolvconf.readNameserversMac();
+    // let nameservers = await browser.experiments.resolvconf.readNameserversWin();
     console.log(nameservers);
 
     if (!Array.isArray(nameservers) || nameservers.length == 0) {
