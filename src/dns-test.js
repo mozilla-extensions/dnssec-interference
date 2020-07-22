@@ -17,7 +17,6 @@ const rollout = {
                 type: 'OPT',
                 name: '.',
                 udpPayloadSize: 4096
-                // flags: dnsPacket.DNSSEC_OK
             }]
         });
         query_proto = buf.__proto__;
