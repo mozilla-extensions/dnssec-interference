@@ -28,14 +28,14 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               context,
               name: "experiments.udpsocket.onDNSResponseReceived",
               register: fire => {
-                const callback = value => {
-                    fire.async(value);
+                const callback = (rawData, usedIPv4Socket) => {
+                    fire.async(rawData, usedIPv4Socket);
                 };
                 socket_ipv4.asyncListen({
                     QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
                     onPacketReceived(aSocket, aMessage) {
                         console.log("IPv4 packet received");
-                        callback(aMessage.rawData);
+                        callback(aMessage.rawData, true);
                     },
                     onStopListening(aSocket, aStatus) {}
                 });
@@ -43,7 +43,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                     QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
                     onPacketReceived(aSocket, aMessage) {
                         console.log("IPv6 packet received");
-                        callback(aMessage.rawData);
+                        callback(aMessage.rawData, false);
                     },
                     onStopListening(aSocket, aStatus) {}
                 });
