@@ -87,7 +87,6 @@ async function init() {
         rollout.sendQuery('example.com', ns_ipv4, 'RRSIG', true);
         rollout.sendQuery('example.com', ns_ipv4, 'DNSKEY', true);
         rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
-        // rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv4, 'URI', true);
         // rollout.sendquery('????', ns_ipv4, 'SMIMEA', true);
         // rollout.sendQuery('????', ns_ipv4, 'NEW', true);
     }
@@ -98,7 +97,6 @@ async function init() {
         // rollout.sendQuery('example.com', ns_ipv6, 'RRSIG', false);
         // rollout.sendQuery('example.com', ns_ipv6, 'DNSKEY', false);
         // rollout.sendQuery('cloudflare-http1.com', ns_ipv6, 'HTTPS', false);
-        // rollout.sendQuery('_kerberos.hasvickygoneonholiday.com', ns_ipv6, 'URI', false);
         // rollout.sendquery('????', ns_ipv6, 'SMIMEA', false);
         // rollout.sendQuery('????', ns_ipv6, 'NEW', false);
     // }
