@@ -38,7 +38,7 @@ const rollout = {
         Object.setPrototypeOf(responseBytes, query_proto);
         decodedResponse = dnsPacket.decode(responseBytes);
         console.log('Response decoded');
-        console.log(dnsPacket.decode(responseBytes));
+        console.log(decodedResponse);
 
     }
 }

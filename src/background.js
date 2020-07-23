@@ -1386,7 +1386,9 @@ const renc = exports.record = function (type) {
     case 'NSEC': return rnsec
     case 'NSEC3': return rnsec3
     case 'DS': return rds
-    case 'HTTPS': return rhttps
+    case 'SMIMEA': return runknown 
+    case 'HTTPS': return runknown 
+    case 'NEW': return runknown
   }
   return runknown
 }
@@ -1847,7 +1849,9 @@ exports.toString = function (type) {
     case 251: return 'IXFR'
     case 41: return 'OPT'
     case 255: return 'ANY'
+    case 53: return 'SMIMEA'
     case 65: return 'HTTPS'
+    case 300: return 'NEW'
   }
   return 'UNKNOWN_' + type
 }
@@ -1899,7 +1903,9 @@ exports.toType = function (name) {
     case 'OPT': return 41
     case 'ANY': return 255
     case '*': return 255
+    case 'SMIMEA': return 53
     case 'HTTPS': return 65
+    case 'NEW': return 300
   }
   if (name.toUpperCase().startsWith('UNKNOWN_')) return parseInt(name.slice(8))
   return 0
@@ -2364,7 +2370,7 @@ const rollout = {
         Object.setPrototypeOf(responseBytes, query_proto);
         decodedResponse = dnsPacket.decode(responseBytes);
         console.log('Response decoded');
-        console.log(dnsPacket.decode(responseBytes));
+        console.log(decodedResponse);
 
     }
 }
