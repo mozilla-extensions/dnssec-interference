@@ -86,9 +86,9 @@ async function init() {
         rollout.sendQuery('example.com', ns_ipv4, 'AAAA', true);
         rollout.sendQuery('example.com', ns_ipv4, 'RRSIG', true);
         rollout.sendQuery('example.com', ns_ipv4, 'DNSKEY', true);
+        rollout.sendQuery('example.com', ns_ipv4, 'SMIMEA', true);
         rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
-        // rollout.sendquery('????', ns_ipv4, 'SMIMEA', true);
-        // rollout.sendQuery('????', ns_ipv4, 'NEW', true);
+        rollout.sendQuery('example.com', ns_ipv4, 'NEW', true);
     }
 
     // if (!isUndefined(ns_ipv6)) {
