@@ -97,9 +97,9 @@ async function init() {
         // rollout.sendQuery('example.com', ns_ipv6, 'AAAA', false);
         // rollout.sendQuery('example.com', ns_ipv6, 'RRSIG', false);
         // rollout.sendQuery('example.com', ns_ipv6, 'DNSKEY', false);
+        // rollout.sendquery('example.com', ns_ipv6, 'SMIMEA', false);
         // rollout.sendQuery('cloudflare-http1.com', ns_ipv6, 'HTTPS', false);
-        // rollout.sendquery('????', ns_ipv6, 'SMIMEA', false);
-        // rollout.sendQuery('????', ns_ipv6, 'NEW', false);
+        // rollout.sendQuery('example.com', ns_ipv6, 'NEW', false);
     // }
 }
 

@@ -8,23 +8,20 @@ const Cu = Components.utils;
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { EventManager} = ExtensionCommon;
 
-// const socket_ipv4 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-// const socket_ipv6 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-
 const socket_ipv4_a         = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_aaaa      = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_rrsig     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_dnskey    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_https     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_smimea    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4_https     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_newrrtype = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 
 const sockets_ipv4 = {"A":      socket_ipv4_a,
                       "AAAA":   socket_ipv4_aaaa,
                       "RRSIG":  socket_ipv4_rrsig,
                       "DNSKEY": socket_ipv4_dnskey, 
-                      "HTTPS":  socket_ipv4_https,
                       "SMIMEA": socket_ipv4_smimea,
+                      "HTTPS":  socket_ipv4_https,
                       "NEW":    socket_ipv4_newrrtype}
 
 var udpsocket = class udpsocket extends ExtensionAPI {
