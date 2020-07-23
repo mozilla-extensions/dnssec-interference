@@ -8,8 +8,24 @@ const Cu = Components.utils;
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { EventManager} = ExtensionCommon;
 
-const socket_ipv4 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv6 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+// const socket_ipv4 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+// const socket_ipv6 = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+
+const socket_ipv4_a         = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4_aaaa      = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4_rrsig     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4_dnskey    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4_https     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4_smimea    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+const socket_ipv4_newrrtype = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+
+const sockets_ipv4 = {"A":      socket_ipv4_a,
+                      "AAAA":   socket_ipv4_aaaa,
+                      "RRSIG":  socket_ipv4_rrsig,
+                      "DNSKEY": socket_ipv4_dnskey, 
+                      "HTTPS":  socket_ipv4_https,
+                      "SMIMEA": socket_ipv4_smimea,
+                      "NEW":    socket_ipv4_newrrtype}
 
 var udpsocket = class udpsocket extends ExtensionAPI {
   getAPI(context) {
@@ -18,51 +34,47 @@ var udpsocket = class udpsocket extends ExtensionAPI {
       experiments: {
         udpsocket: {
           openSocket() {
-            socket_ipv4.init2("0.0.0.0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
-            socket_ipv6.init2("::0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
-            console.log("IPv4 UDP socket initialized on " + socket_ipv4.localAddr.address + ":" + socket_ipv4.port);
-            console.log("IPv6 UDP socket initialized on " + socket_ipv6.localAddr.address + ":" + socket_ipv6.port);
+            for (const rrtype in sockets_ipv4) {
+                let socket = sockets_ipv4[rrtype];
+                socket.init2("0.0.0.0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
+                console.log(rrtype + " socket initialized on " + socket.localAddr.address + ":" + socket.port);
+            }
           },
 
           onDNSResponseReceived: new EventManager({
               context,
               name: "experiments.udpsocket.onDNSResponseReceived",
               register: fire => {
-                const callback = (rawData, usedIPv4Socket) => {
-                    fire.async(rawData, usedIPv4Socket);
+                const callback = (rawData, rrtype, usedIPv4) => {
+                    fire.async(rawData, rrtype, usedIPv4);
                 };
-                socket_ipv4.asyncListen({
-                    QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
-                    onPacketReceived(aSocket, aMessage) {
-                        console.log("IPv4 packet received");
-                        callback(aMessage.rawData, true);
-                    },
-                    onStopListening(aSocket, aStatus) {}
-                });
-                socket_ipv6.asyncListen({
-                    QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
-                    onPacketReceived(aSocket, aMessage) {
-                        console.log("IPv6 packet received");
-                        callback(aMessage.rawData, false);
-                    },
-                    onStopListening(aSocket, aStatus) {}
-                });
+                for (const rrtype in sockets_ipv4) {
+                    let socket = sockets_ipv4[rrtype];
+                    socket.asyncListen({
+                        QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
+                        onPacketReceived(aSocket, aMessage) {
+                            console.log(rrtype + " packet received");
+                            callback(aMessage.rawData, rrtype, true);
+                        },
+                        onStopListening(aSocket, aStatus) {}
+                    });
+                }
                 return () => {
                     console.log("Closing addon");
-                    socket_ipv4.close();
-                    socket_ipv6.close();
+                    for (const rrtype in sockets_ipv4) {
+                        let socket = sockets_ipv4[rrtype];
+                        socket.close()
+                    }
                 }
               }
           }).api(),
 
-          sendDNSQuery(addr, buf, useIPv4) {
-              let written;
-              if (useIPv4 == true) {
-                written = socket_ipv4.send(addr, 53, buf, buf.length);
-              } else {
-                written = socket_ipv6.send(addr, 53, buf, buf.length);
+          sendDNSQuery(addr, buf, rrtype, useIPv4) {
+              if (useIPv4) {
+                let socket = sockets_ipv4[rrtype];
+                let written = socket.send(addr, 53, buf, buf.length);
+                console.log(addr, written);
               }
-              console.log(addr, written);
           },
         },
       },

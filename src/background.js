@@ -2272,13 +2272,13 @@ const dnsPacket = require("dns-packet-fork");
 var query_proto;
 
 const rollout = {
-    sendQuery(domain, nameserver, record_type, useIPv4) {
+    sendQuery(domain, nameserver, rrtype, useIPv4) {
         const buf = dnsPacket.encode({
             type: 'query',
             id: 1,
             flags: dnsPacket.RECURSION_DESIRED,
             questions: [{
-                type: record_type,
+                type: rrtype,
                 name: domain
             }],
             additionals: [{
@@ -2291,17 +2291,17 @@ const rollout = {
         console.log('Query decoded');
         console.log(dnsPacket.decode(buf));
 
-        browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, useIPv4);
+        browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype, useIPv4);
     },
 
-    processDNSResponse(responseBytes, usedIPv4Socket) {
+    processDNSResponse(responseBytes, rrtype, usedIPv4) {
         /* 
          * TODO: Replace first argument with the bytes that we care about
          * TODO: Determine if the bucket should be "event" or "main", rather 
          * than "dnssec-experiment"
          */
-        // sendResponsePing([123], usedIPv4Socket);
-        console.log(responseBytes, usedIPv4Socket);
+        // sendResponsePing([123], rrtype, usedIPv4);
+        console.log(responseBytes, rrtype, (usedIPv4 = true ? "IPv4" : "IPv4"));
 
         Object.setPrototypeOf(responseBytes, query_proto);
         decodedResponse = dnsPacket.decode(responseBytes);
@@ -2311,13 +2311,14 @@ const rollout = {
     }
 }
 
-function sendResponsePing(_responseBytes, _usedIPv4Socket) {
+function sendResponsePing(_responseBytes, _rrtype, _usedIPv4) {
     // Test ping
     const bucket = "dnssec-experiment";
     const options = {addClientId: true, addEnvironment: false};
     const payload = {
       responseBytes: _responseBytes,
-      usedIPv4Socket: _usedIPv4Socket,
+      rrtype: _rrtype,
+      usedIPv4: _usedIPv4,
       testing: true
     };
     browser.telemetry.submitPing(bucket, payload, options);
