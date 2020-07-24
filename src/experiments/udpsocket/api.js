@@ -31,11 +31,17 @@ var udpsocket = class udpsocket extends ExtensionAPI {
       experiments: {
         udpsocket: {
           openSocket() {
-            for (const rrtype in sockets_ipv4) {
+            try {
+              for (const rrtype in sockets_ipv4) {
                 let socket = sockets_ipv4[rrtype];
                 socket.init2("0.0.0.0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
                 console.log(rrtype + " socket initialized on " + socket.localAddr.address + ":" + socket.port);
+              }
+            } catch(e) {
+              console.log(e);
+              return false;
             }
+              return true;
           },
 
           onDNSResponseReceived: new EventManager({
@@ -67,11 +73,18 @@ var udpsocket = class udpsocket extends ExtensionAPI {
           }).api(),
 
           sendDNSQuery(addr, buf, rrtype, useIPv4) {
-              if (useIPv4) {
-                let socket = sockets_ipv4[rrtype];
-                let written = socket.send(addr, 53, buf, buf.length);
-                console.log(addr, written);
+              let written;
+              try {
+                if (useIPv4) {
+                  let socket = sockets_ipv4[rrtype];
+                  written = socket.send(addr, 53, buf, buf.length);
+                  console.log(addr, written);
+                }
+              } catch(e) {
+                console.log(e);
+                written = 0;
               }
+              return written;
           },
         },
       },

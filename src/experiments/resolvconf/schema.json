@@ -10,14 +10,14 @@
         "type": "function",
         "description": "This method reads /etc/resolv.conf from disk on macOS and parses the nameserver fields",
         "parameters": [],
-        "async": true 
+        "async": true
       },
       {
         "name": "readNameserversWin",
         "type": "function",
         "description": "This method reads from a registry on Windows and parses the DhcpNameserver fields",
         "parameters": [],
-        "async": true 
+        "async": true
       }
     ]
   }

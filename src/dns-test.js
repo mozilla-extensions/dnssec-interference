@@ -1,10 +1,11 @@
 /* global browser */
 const dnsPacket = require("dns-packet-fork");
 
+const rrtypes = ['A', 'AAAA', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
 var query_proto;
 
 const rollout = {
-    sendQuery(domain, nameserver, rrtype, useIPv4) {
+    async sendQuery(domain, nameserver, rrtype, useIPv4) {
         const buf = dnsPacket.encode({
             type: 'query',
             id: 1,
@@ -23,7 +24,7 @@ const rollout = {
         console.log('Query decoded');
         console.log(dnsPacket.decode(buf));
 
-        browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype, useIPv4);
+        return await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype, useIPv4);
     },
 
     processDNSResponse(responseBytes, rrtype, usedIPv4) {
@@ -43,11 +44,53 @@ const rollout = {
     }
 }
 
+function sendNameserversErrorPing() {
+    // Test ping
+    const bucket = "dnssec-experiment";
+    const options = {addClientId: true, addEnvironment: true};
+    const payload = {
+      type: "dnssec-experimnent",
+      msg: "error-no-nameservers",
+      testing: true
+    };
+    browser.telemetry.submitPing(bucket, payload, options);
+}
+
+function sendSocketsOpenErrorPing(_usedIPv4) {
+    // Test ping
+    const bucket = "dnssec-experiment";
+    const options = {addClientId: true, addEnvironment: true};
+    const payload = {
+      type: "dnssec-experimnent",
+      msg: "error-socket-not-opened",
+      usedIPv4: _usedIPv4,
+      testing: true
+    };
+    browser.telemetry.submitPing(bucket, payload, options);
+}
+
+function sendBytesWrittenErrorPing(_bytesWritten, _rrtype, _usedIPv4) {
+    // Test ping
+    const bucket = "dnssec-experiment";
+    const options = {addClientId: true, addEnvironment: true};
+    const payload = {
+      type: "dnssec-experimnent",
+      msg: "error-bytes-written",
+      bytesWritten: _bytesWritten,
+      rrtype: _rrtype,
+      usedIPv4: _usedIPv4,
+      testing: true
+    };
+    browser.telemetry.submitPing(bucket, payload, options);
+}
+
 function sendResponsePing(_responseBytes, _rrtype, _usedIPv4) {
     // Test ping
     const bucket = "dnssec-experiment";
-    const options = {addClientId: true, addEnvironment: false};
+    const options = {addClientId: true, addEnvironment: true};
     const payload = {
+      type: "dnssec-experiment",
+      msg: "dns-response",
       responseBytes: _responseBytes,
       rrtype: _rrtype,
       usedIPv4: _usedIPv4,
@@ -59,10 +102,10 @@ function sendResponsePing(_responseBytes, _rrtype, _usedIPv4) {
 async function init() {
     let nameservers = await browser.experiments.resolvconf.readNameserversMac();
     // let nameservers = await browser.experiments.resolvconf.readNameserversWin();
-    console.log(nameservers);
 
     if (!Array.isArray(nameservers) || nameservers.length == 0) {
-        throw "Could not read /etc/resolv.conf, or nameservers not found in file";
+        sendNameserversErrorPing();
+        return;
     }
   
     let ns_ipv4;
@@ -74,33 +117,36 @@ async function init() {
         } else if (isUndefined(ns_ipv6) && !isUndefined(ns) && ns.includes(":")) {
             ns_ipv6 = ns;
         }
-        console.log(ns_ipv4 + " " + ns_ipv6);
     }
+    console.log("IPv4 resolver: ", ns_ipv4);
+    console.log("IPv6 resolver: ", ns_ipv6);
 
-    console.log("IPv4 Nameserver chosen: " + ns_ipv4);
-    console.log("IPv6 Nameserver chosen: " + ns_ipv6);
-    browser.experiments.udpsocket.openSocket();
+    // TODO: If we use IPv4 and IPv6 sockets in the future, then we may 
+    // want to split openSocket() into two different methods. This would enable 
+    // us to determine if IPV4 sockets vs. IPv6 sockets failed to open.
+    let allOpened = await browser.experiments.udpsocket.openSocket();
+    if (!allOpened) {
+        // Since we're just using IPv4 sockets right now, hard-code to "true."
+        sendSocketsOpenErrorPing(true);
+        return;
+    }
     browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
 
     if (!isUndefined(ns_ipv4)) {
-        rollout.sendQuery('example.com', ns_ipv4, 'A', true);
-        rollout.sendQuery('example.com', ns_ipv4, 'AAAA', true);
-        rollout.sendQuery('example.com', ns_ipv4, 'RRSIG', true);
-        rollout.sendQuery('example.com', ns_ipv4, 'DNSKEY', true);
-        rollout.sendQuery('example.com', ns_ipv4, 'SMIMEA', true);
-        rollout.sendQuery('cloudflare-http1.com', ns_ipv4, 'HTTPS', true);
-        rollout.sendQuery('example.com', ns_ipv4, 'NEW', true);
-    }
+        let written;
+        for (let i = 0; i < rrtypes.length; i++) {
+          let rrtype = rrtypes[i];
+          if (rrtype == 'HTTPS') {
+            written = await rollout.sendQuery('cloudflare-http1.com', ns_ipv4, rrtype, true);
+          } else {
+            written = await rollout.sendQuery('example.com', ns_ipv4, rrtype, true);
+          }
 
-    // if (!isUndefined(ns_ipv6)) {
-        // rollout.sendQuery('example.com', ns_ipv6, 'A', false);
-        // rollout.sendQuery('example.com', ns_ipv6, 'AAAA', false);
-        // rollout.sendQuery('example.com', ns_ipv6, 'RRSIG', false);
-        // rollout.sendQuery('example.com', ns_ipv6, 'DNSKEY', false);
-        // rollout.sendquery('example.com', ns_ipv6, 'SMIMEA', false);
-        // rollout.sendQuery('cloudflare-http1.com', ns_ipv6, 'HTTPS', false);
-        // rollout.sendQuery('example.com', ns_ipv6, 'NEW', false);
-    // }
+          if (written <= 0) {
+            sendBytesWrittenErrorPing(written, rrtype, true);
+          }
+        }
+    }
 }
 
 function isUndefined(x) {
