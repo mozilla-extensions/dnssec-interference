@@ -39,13 +39,13 @@ const rollout = {
                 await sleep(resolvconf_timeout);
 
                 if (!isUndefined(dns_responses[rrtype])) {
-                    break;
+                    return written;
                 } else {
                     console.log("Need to re-transmit");
                 }
             }
-            return written;
         }
+        return written;
     },
 
     processDNSResponse(responseBytes, rrtype, usedIPv4) {
@@ -154,18 +154,12 @@ async function init() {
     browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
 
     if (nameservers_ipv4.length > 0) {
-        let written;
         for (let i = 0; i < rrtypes.length; i++) {
-          let rrtype = rrtypes[i];
-          if (rrtype == 'HTTPS') {
-            written = await rollout.sendQuery('cloudflare-http1.com', nameservers_ipv4, rrtype, true);
-          } else {
-            written = await rollout.sendQuery('example.com', nameservers_ipv4, rrtype, true);
-          }
-
-          if (written <= 0) {
-            sendBytesWrittenErrorPing(written, rrtype, true);
-          }
+            let rrtype = rrtypes[i];
+            let written = await rollout.sendQuery('example.com', nameservers_ipv4, rrtype, true);
+            if (written <= 0) {
+                sendBytesWrittenErrorPing(written, rrtype, true);
+            }
         }
     }
     console.log(dns_responses);
