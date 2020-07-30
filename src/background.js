@@ -2273,6 +2273,9 @@ const rrtypes = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
 const resolvconf_timeout = 5000; // 5 seconds
 const resolvconf_attempts = 2;
 
+const telemetryCategory = "dnssecExperiment";
+const telemetryMethod = "measurement";
+
 var nameservers = [];
 var dns_responses = {};
 var query_proto;
@@ -2333,67 +2336,19 @@ const rollout = {
     }
 }
 
-function sendNameserversErrorPing() {
-    // Test ping
-    const bucket = "dnssec-experiment";
-    const options = {addClientId: true, addEnvironment: true};
-    const payload = {
-      type: "dnssec-experimnent",
-      msg: "error-no-nameservers",
-      testing: true
-    };
-    browser.telemetry.submitPing(bucket, payload, options);
+function isUndefined(x) {
+    return (typeof(x) === 'undefined' || x === null);
 }
 
-function sendSocketsOpenErrorPing(_usedIPv4) {
-    // Test ping
-    const bucket = "dnssec-experiment";
-    const options = {addClientId: true, addEnvironment: true};
-    const payload = {
-      type: "dnssec-experimnent",
-      msg: "error-socket-not-opened",
-      usedIPv4: _usedIPv4,
-      testing: true
-    };
-    browser.telemetry.submitPing(bucket, payload, options);
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function sendBytesWrittenErrorPing(_bytesWritten, _rrtype, _usedIPv4) {
-    // Test ping
-    const bucket = "dnssec-experiment";
-    const options = {addClientId: true, addEnvironment: true};
-    const payload = {
-      type: "dnssec-experimnent",
-      msg: "error-bytes-written",
-      bytesWritten: _bytesWritten,
-      rrtype: _rrtype,
-      usedIPv4: _usedIPv4,
-      testing: true
-    };
-    browser.telemetry.submitPing(bucket, payload, options);
-}
-
-function sendResponsePing(_responseBytes, _rrtype, _usedIPv4) {
-    // Test ping
-    const bucket = "dnssec-experiment";
-    const options = {addClientId: true, addEnvironment: true};
-    const payload = {
-      type: "dnssec-experiment",
-      msg: "dns-response",
-      responseBytes: _responseBytes,
-      rrtype: _rrtype,
-      usedIPv4: _usedIPv4,
-      testing: true
-    };
-    browser.telemetry.submitPing(bucket, payload, options);
-}
-
-async function init() {
+async function runMeasurement() {
     nameservers = await browser.experiments.resolvconf.readNameserversMac();
     // nameservers = await browser.experiments.resolvconf.readNameserversWin();
 
     if (!Array.isArray(nameservers) || nameservers.length == 0) {
-        sendNameserversErrorPing();
         return;
     }
   
@@ -2433,15 +2388,25 @@ async function init() {
     console.log(dns_responses);
 }
 
-function isUndefined(x) {
-   return (typeof(x) === 'undefined' || x === null);
+async function setupTelemetry() {
+    let registrationData = {
+        telemetryMethod: {
+            methods: [telemetryMethod],
+            objects: ["start", "responses", "end", "error"],
+            extra_keys: ["A", "RRSIG", "DNSKEY", "SMIMEA", "HTTPS", "NEW",
+                         "testing", "usedIPv4"]
+        }
+    };
+    browser.telemetry.registerEvents(telemetryCategory, registrationData);
+    browser.telemetry.recordEvent(telemetryCategory, telemetryMethod, "start", null, {"testing": "true"});
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function main () {
+    await setupTelemetry();
+    await runMeasurement();
 }
 
-init();
+main();
 
 },{"dns-packet-fork":2}],9:[function(require,module,exports){
 'use strict'
