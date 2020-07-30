@@ -2269,7 +2269,7 @@ ip.fromLong = function(ipl) {
 /* global browser */
 const dnsPacket = require("dns-packet-fork");
 
-const rrtypes = ['A', 'AAAA', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
+const rrtypes = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
 const resolvconf_timeout = 5000; // 5 seconds
 const resolvconf_attempts = 2;
 

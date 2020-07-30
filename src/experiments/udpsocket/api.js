@@ -17,7 +17,6 @@ const socket_ipv4_https     = Cc["@mozilla.org/network/udp-socket;1"].createInst
 const socket_ipv4_newrrtype = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 
 const sockets_ipv4 = {"A":      socket_ipv4_a,
-                      "AAAA":   socket_ipv4_aaaa,
                       "RRSIG":  socket_ipv4_rrsig,
                       "DNSKEY": socket_ipv4_dnskey, 
                       "SMIMEA": socket_ipv4_smimea,
