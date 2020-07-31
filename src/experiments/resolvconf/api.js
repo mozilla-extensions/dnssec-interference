@@ -13,18 +13,14 @@ var resolvconf = class resolvconf extends ExtensionAPI {
         resolvconf: {
           async readNameserversMac() {
             let nameservers = [];
-            try {
-              let resolvconf_string = await OS.File.read("/etc/resolv.conf", { "encoding": "utf-8" });
-              let lines = resolvconf_string.split("\n");
-              for (var i = 0; i < lines.length; i++) {
-                let line = lines[i];
-                if (line.startsWith("nameserver")) {
-                  let ns = line.split(" ")[1];
-                  nameservers.push(ns);
-                }
+            let resolvconf_string = await OS.File.read("/etc/resolv.conf", { "encoding": "utf-8" });
+            let lines = resolvconf_string.split("\n");
+            for (var i = 0; i < lines.length; i++) {
+              let line = lines[i];
+              if (line.startsWith("nameserver")) {
+                let ns = line.split(" ")[1];
+                nameservers.push(ns);
               }
-            } catch (e) {
-              console.log(e);
             }
             return nameservers;
           },
@@ -33,19 +29,14 @@ var resolvconf = class resolvconf extends ExtensionAPI {
             let nameservers = [];
             let rootKey = 0x80000002;
             let path = "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters"
+            let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
+              Ci.nsIWindowsRegKey
+            );
 
-            try {
-              let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
-                Ci.nsIWindowsRegKey
-              );
-              key.open(rootKey, path, Ci.nsIWindowsRegKey.ACCESS_READ);
-              let nameservers_registry = key.readStringValue("DhcpNameServer");
-              nameservers = nameservers_registry.split(" ");
-            } catch (e) {
-              console.log(e);
-            } finally {
-              key.close();
-            }
+            key.open(rootKey, path, Ci.nsIWindowsRegKey.ACCESS_READ);
+            let nameservers_registry = key.readStringValue("DhcpNameServer");
+            nameservers = nameservers_registry.split(" ");
+            key.close();
             return nameservers;
           }
         }

@@ -1,24 +1,31 @@
 /* global browser */
-const dnsPacket = require("dns-packet-fork");
+const DNS_PACKET = require("dns-packet-fork");
 
-const rrtypes = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
-const resolvconf_timeout = 5000; // 5 seconds
-const resolvconf_attempts = 2;
+const DOMAIN_NAME = "dnssec-experiment-moz.net"
+const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
+const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
+const RESOLVCONF_ATTEMPTS = 2;
 
-const telemetryCategory = "dnssecExperiment";
-const telemetryMethod = "measurement";
+const TELEMETRY_CATEGORY = "dnssecExperiment";
+const TELEMETRY_METHOD = "measurement";
 
 var nameservers = [];
-var dns_responses = {};
 var query_proto;
+
+var dnsResponses = {"A":      {"data": "", "transmission": ""},
+                    "RRSIG":  {"data": "", "transmission": ""},
+                    "DNSKEY": {"data": "", "transmission": ""},
+                    "SMIMEA": {"data": "", "transmission": ""},
+                    "HTTPS":  {"data": "", "transmission": ""},
+                    "NEW":    {"data": "", "transmission": ""}};
 
 const rollout = {
     async sendQuery(domain, nameservers, rrtype, useIPv4) {
         let written = 0;
-        const buf = dnsPacket.encode({
+        const buf = DNS_PACKET.encode({
             type: 'query',
             id: 1,
-            flags: dnsPacket.RECURSION_DESIRED,
+            flags: DNS_PACKET.RECURSION_DESIRED,
             questions: [{
                 type: rrtype,
                 name: domain
@@ -31,24 +38,32 @@ const rollout = {
         });
         query_proto = buf.__proto__;
         console.log('Query decoded');
-        console.log(dnsPacket.decode(buf));
+        console.log(DNS_PACKET.decode(buf));
 
         // Keep re-transmitting according to default resolv.conf behavior,
         // checking if we have a DNS response for the RR type yet
         for (let i = 0; i < nameservers.length; i++) {
-            for (let j = 0; j < resolvconf_attempts; j++) {
+            for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
                 let nameserver = nameservers[i];
+                dnsResponses[rrtype]["transmission"] = j;
                 let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype, useIPv4);
-                await sleep(resolvconf_timeout);
+                if (written <= 0) {
+                    browser.study.sendTelemetry({
+                      "event": "sendDNSQueryError",
+                      "rrtype": rrtype,
+                      "transmission": j.toString(),
+                      "usedIPv4": "true"},
+                    "shield");
+                }
+                await sleep(RESOLVCONF_TIMEOUT);
 
-                if (!isUndefined(dns_responses[rrtype])) {
-                    return written;
-                } else {
+                if (isUndefined(dnsResponses[rrtype]["data"])) {
                     console.log("Need to re-transmit");
+                } else {
+                    return
                 }
             }
         }
-        return written;
     },
 
     processDNSResponse(responseBytes, rrtype, usedIPv4) {
@@ -57,12 +72,11 @@ const rollout = {
          * TODO: Determine if the bucket should be "event" or "main", rather 
          * than "dnssec-experiment"
          */
-        dns_responses[rrtype] = responseBytes;
-        // sendResponsePing([123], rrtype, usedIPv4);
+        dnsResponses[rrtype]["data"] = responseBytes;
         console.log(responseBytes, rrtype, (usedIPv4 = true ? "IPv4" : "IPv4"));
 
         Object.setPrototypeOf(responseBytes, query_proto);
-        decodedResponse = dnsPacket.decode(responseBytes);
+        decodedResponse = DNS_PACKET.decode(responseBytes);
         console.log('Response decoded');
         console.log(decodedResponse);
     }
@@ -76,14 +90,20 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function runMeasurement() {
-    nameservers = await browser.experiments.resolvconf.readNameserversMac();
-    // nameservers = await browser.experiments.resolvconf.readNameserversWin();
+async function readNameservers() {
+    try{ 
+        nameservers = await browser.experiments.resolvconf.readNameserversMac();
+        // nameservers = await browser.experiments.resolvconf.readNameserversWin();
+    } catch(e) {
+        browser.study.sendTelemetry({"event": "readNameserversError"}, "shield");
+        throw e;
+    } 
 
-    if (!Array.isArray(nameservers) || nameservers.length == 0) {
-        return;
+    if (!Array.isArray(nameservers) || nameservers.length <= 0) {
+        browser.study.sendTelemetry({"event": "noNameserversError"}, "shield");
+        throw e;
     }
-  
+
     let nameservers_ipv4 = [];
     let nameservers_ipv6 = [];
     for (var i = 0; i < nameservers.length; i++) {
@@ -96,46 +116,56 @@ async function runMeasurement() {
     }
     console.log("IPv4 resolvers: ", nameservers_ipv4);
     console.log("IPv6 resolvers: ", nameservers_ipv6);
+    return [nameservers_ipv4, nameservers_ipv6];
+}
 
+async function setupNetworkingCode() {
     // TODO: If we use IPv4 and IPv6 sockets in the future, then we may 
     // want to split openSocket() into two different methods. This would enable 
     // us to determine if IPV4 sockets vs. IPv6 sockets failed to open.
-    let allOpened = await browser.experiments.udpsocket.openSocket();
-    if (!allOpened) {
-        // Since we're just using IPv4 sockets right now, hard-code to "true."
-        sendSocketsOpenErrorPing(true);
-        return;
+    try {
+        await browser.experiments.udpsocket.openSocket();
+        browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
+    } catch(e) {
+        // Since we're just using IPv4 sockets right now, 
+        // hard-code "usedIPv4" to "true."
+        browser.study.sendTelemetry({
+            "event": "openSocketError",
+            "usedIPv4": "true"},
+        "shield");
+        throw e;
     }
-    browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
+}
 
-    if (nameservers_ipv4.length > 0) {
-        for (let i = 0; i < rrtypes.length; i++) {
-            let rrtype = rrtypes[i];
-            let written = await rollout.sendQuery('example.com', nameservers_ipv4, rrtype, true);
-            if (written <= 0) {
-                sendBytesWrittenErrorPing(written, rrtype, true);
-            }
-        }
+async function sendQueries(nameservers_ipv4, nameservers_ipv6) {
+    for (let i = 0; i < RRTYPES.length; i++) {
+      try {
+        let rrtype = RRTYPES[i];
+        await rollout.sendQuery(DOMAIN_NAME, nameservers_ipv4, rrtype, true);
+      } catch(e) {
+        browser.study.sendTelemetry({"event": "sendQueryError", 
+                                     "usedIPv4": "true"},
+                                     "shield");
+        throw e;
+      }
     }
-    console.log(dns_responses);
+    // TODO: Send DNS responses to telemetry
 }
 
-async function setupTelemetry() {
-    let registrationData = {
-        telemetryMethod: {
-            methods: [telemetryMethod],
-            objects: ["start", "responses", "end", "error"],
-            extra_keys: ["A", "RRSIG", "DNSKEY", "SMIMEA", "HTTPS", "NEW",
-                         "testing", "usedIPv4"]
-        }
-    };
-    browser.telemetry.registerEvents(telemetryCategory, registrationData);
-    browser.telemetry.recordEvent(telemetryCategory, telemetryMethod, "start", null, {"testing": "true"});
+async function runMeasurement() {
+    // Send a ping to indicate the start of the measurement
+    browser.study.sendTelemetry({"event": "startMeasurement"}, "shield");
+
+    let nameservers = await readNameservers();
+    let nameservers_ipv4 = nameservers[0];
+    let nameservers_ipv6 = nameservers[1];
+    console.log(nameservers_ipv4, nameservers_ipv6);
+
+    await setupNetworkingCode();
+    await sendQueries(nameservers_ipv4, nameservers_ipv6);
+
+    // Send a ping to indicate the start of the measurement
+    browser.study.sendTelemetry({"event": "endMeasurement"}, "shield");
 }
 
-async function main () {
-    await setupTelemetry();
-    await runMeasurement();
-}
-
-main();
+runMeasurement();
