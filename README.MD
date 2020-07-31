@@ -1,6 +1,6 @@
 ## Major TODOs ##
-* Set up a DNSSEC-signed record set for a domain name that we control
-* Plug in Telemetry code
+* Set up SMIMEA, HTTPS, and custom record on Cloudflare's dashboard
+* Check with ekr whether we just want RDATA or the whole DNS response
 
 ## Minor TODOs ##
 * Figure out if we need to set a random ID value for the DNS request
@@ -24,3 +24,5 @@
 * Figure out how to read /etc/resolv.conf for list of nameservers on Mac/Linux
 * Figure out how to read registries for list of nameservers on Windows
 * Figure out if we can craft a request for an arbitrary record type
+* Set up a DNSSEC-signed record set for a domain name that we control
+* Plug in Telemetry code
