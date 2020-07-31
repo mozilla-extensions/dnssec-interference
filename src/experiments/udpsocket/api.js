@@ -56,7 +56,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                     });
                 }
                 return () => {
-                    console.log("Closing addon");
+                    console.log("Closing sockets");
                     for (const rrtype in sockets_ipv4) {
                         let socket = sockets_ipv4[rrtype];
                         socket.close()

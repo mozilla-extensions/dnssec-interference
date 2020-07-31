@@ -2420,6 +2420,10 @@ async function sendQueries(nameservers_ipv4, nameservers_ipv6) {
     // TODO: Send DNS responses to telemetry
 }
 
+function cleanup() {
+    browser.experiments.udpsocket.onDNSResponseReceived.removeListener(rollout.processDNSResponse);
+}
+
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
     browser.study.sendTelemetry({"event": "startMeasurement"}, "shield");
@@ -2434,6 +2438,7 @@ async function runMeasurement() {
 
     // Send a ping to indicate the start of the measurement
     browser.study.sendTelemetry({"event": "endMeasurement"}, "shield");
+    cleanup();
 }
 
 runMeasurement();
