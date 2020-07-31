@@ -31,15 +31,23 @@
       "parent": {
         "scopes": ["addon_parent"],
         "paths": [["experiments", "udpsocket"]],
-	"script": "experiments/udpsocket/api.js"
+	    "script": "experiments/udpsocket/api.js"
       }
     },
     "resolvconf": {
       "schema": "experiments/resolvconf/schema.json",
       "parent": {
-	"scopes": ["addon_parent"],
+	    "scopes": ["addon_parent"],
         "paths": [["experiments", "resolvconf"]],
         "script": "experiments/resolvconf/api.js"
+      }
+    },
+    "study": {
+      "schema": "privileged/study/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "script": "privileged/study/api.js",
+        "paths": [["study"]]
       }
     }
   }
