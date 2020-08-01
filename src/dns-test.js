@@ -7,11 +7,11 @@ const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
-const MEASUREMENT_ID = uuidv4();
 const TELEMETRY_PIPELINE = "shield";
 
 var nameservers = [];
 var query_proto;
+var measurement_id;
 
 var dnsResponses = {"A":      {"data": "", "transmission": ""},
                     "RRSIG":  {"data": "", "transmission": ""},
@@ -142,7 +142,7 @@ async function sendQueries(nameservers_ipv4, nameservers_ipv6) {
 }
 
 function sendTelemetry(payload) {
-    payload["measurement_id"] = MEASUREMENT_ID;
+    payload["measurement_id"] = measurement_id;
     browser.study.sendTelemetry(payload, TELEMETRY_PIPELINE);
 }
 
@@ -152,6 +152,7 @@ function cleanup() {
 
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
+    measurement_id = uuidv4();
     sendTelemetry({"event": "startMeasurement"});
 
     let nameservers = await readNameservers();
