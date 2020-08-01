@@ -1,13 +1,14 @@
 /* global browser */
 const DNS_PACKET = require("dns-packet-fork");
+const { v4: uuidv4 } = require("uuid");
 
-const DOMAIN_NAME = "dnssec-experiment-moz.net"
+const DOMAIN_NAME = "dnssec-experiment-moz.net";
 const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
-const TELEMETRY_CATEGORY = "dnssecExperiment";
-const TELEMETRY_METHOD = "measurement";
+const MEASUREMENT_ID = uuidv4();
+const TELEMETRY_PIPELINE = "shield";
 
 var nameservers = [];
 var query_proto;
@@ -48,12 +49,10 @@ const rollout = {
                 dnsResponses[rrtype]["transmission"] = j;
                 let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype, useIPv4);
                 if (written <= 0) {
-                    browser.study.sendTelemetry({
-                      "event": "sendDNSQueryError",
-                      "rrtype": rrtype,
-                      "transmission": j.toString(),
-                      "usedIPv4": "true"},
-                    "shield");
+                    sendTelemetry({"event": "sendDNSQueryError", 
+                                   "rrtype": rrtype, 
+                                   "transmission": j.toString(), 
+                                   "usedIPv4": "true"});
                 }
                 await sleep(RESOLVCONF_TIMEOUT);
 
@@ -67,11 +66,6 @@ const rollout = {
     },
 
     processDNSResponse(responseBytes, rrtype, usedIPv4) {
-        /* 
-         * TODO: Replace first argument with the bytes that we care about
-         * TODO: Determine if the bucket should be "event" or "main", rather 
-         * than "dnssec-experiment"
-         */
         dnsResponses[rrtype]["data"] = responseBytes;
         console.log(responseBytes, rrtype, (usedIPv4 = true ? "IPv4" : "IPv4"));
 
@@ -95,12 +89,12 @@ async function readNameservers() {
         nameservers = await browser.experiments.resolvconf.readNameserversMac();
         // nameservers = await browser.experiments.resolvconf.readNameserversWin();
     } catch(e) {
-        browser.study.sendTelemetry({"event": "readNameserversError"}, "shield");
+        sendTelemetry({"event": "readNameserversError"});
         throw e;
     } 
 
     if (!Array.isArray(nameservers) || nameservers.length <= 0) {
-        browser.study.sendTelemetry({"event": "noNameserversError"}, "shield");
+        sendTelemetry({"event": "noNameserversError"});
         throw e;
     }
 
@@ -129,10 +123,7 @@ async function setupNetworkingCode() {
     } catch(e) {
         // Since we're just using IPv4 sockets right now, 
         // hard-code "usedIPv4" to "true."
-        browser.study.sendTelemetry({
-            "event": "openSocketError",
-            "usedIPv4": "true"},
-        "shield");
+        sendTelemetry({"event": "openSocketError", "usedIPv4": "true"});
         throw e;
     }
 }
@@ -143,13 +134,16 @@ async function sendQueries(nameservers_ipv4, nameservers_ipv6) {
         let rrtype = RRTYPES[i];
         await rollout.sendQuery(DOMAIN_NAME, nameservers_ipv4, rrtype, true);
       } catch(e) {
-        browser.study.sendTelemetry({"event": "sendQueryError", 
-                                     "usedIPv4": "true"},
-                                     "shield");
+        sendTelemetry({"event": "sendQueryError", "usedIPv4": "true"});
         throw e;
       }
     }
     // TODO: Send DNS responses to telemetry
+}
+
+function sendTelemetry(payload) {
+    payload["measurement_id"] = MEASUREMENT_ID;
+    browser.study.sendTelemetry(payload, TELEMETRY_PIPELINE);
 }
 
 function cleanup() {
@@ -158,7 +152,7 @@ function cleanup() {
 
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
-    browser.study.sendTelemetry({"event": "startMeasurement"}, "shield");
+    sendTelemetry({"event": "startMeasurement"});
 
     let nameservers = await readNameservers();
     let nameservers_ipv4 = nameservers[0];
@@ -169,7 +163,7 @@ async function runMeasurement() {
     await sendQueries(nameservers_ipv4, nameservers_ipv6);
 
     // Send a ping to indicate the start of the measurement
-    browser.study.sendTelemetry({"event": "endMeasurement"}, "shield");
+    sendTelemetry({"event": "endMeasurement"});
     cleanup();
 }
 
