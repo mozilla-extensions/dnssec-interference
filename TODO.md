@@ -1,19 +1,13 @@
 ## Major TODOs ##
 * Set up custom record types with Cloudflare folks
-* Check with ekr whether we just want RDATA or the whole DNS response
-* Check with ekr whether it's ok to use UDP for RRSIG, DNSKEY, and SMIMEA
+* Set up TCP sockets to transmit requests side by side with UDP sockets
 
 ## Minor TODOs ##
-* Figure out if we need to set a random ID value for the DNS request
+* Figure out if we should set a random ID value for each DNS request
 * Come up with a less-hacky way of storing the __proto__ for the object created
   by dns-packet.encode()
 * Figure out a better way to include Node.js modules without using browserify on
 dns-test.js to create background.js
-
-## Bugs ##
-* Figure out why we sometimes don't receive the second response when we send one
-request over an IPv4 socket and another request over an IPv6 socket -- Likely 
-wontfix; will just use IPv4 sockets
 
 ## Completed ##
 * Document the experiment design
