@@ -3,7 +3,7 @@ const DNS_PACKET = require("dns-packet-dev");
 const { v4: uuidv4 } = require("uuid");
 
 const DOMAIN_NAME = "dnssec-experiment-moz.net";
-const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
+const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
@@ -18,7 +18,8 @@ var dnsResponses = {"A":      {"data": "", "transmission": ""},
                     "DNSKEY": {"data": "", "transmission": ""},
                     "SMIMEA": {"data": "", "transmission": ""},
                     "HTTPS":  {"data": "", "transmission": ""},
-                    "NEW":    {"data": "", "transmission": ""}};
+                    "NEWONE":    {"data": "", "transmission": ""},
+                    "NEWTWO":    {"data": "", "transmission": ""}};
 
 const rollout = {
     async sendQuery(domain, nameservers, rrtype, useIPv4) {
