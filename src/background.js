@@ -1782,6 +1782,10 @@ exports.toString = function (type) {
     case 251: return 'IXFR'
     case 41: return 'OPT'
     case 255: return 'ANY'
+    case 53: return 'SMIMEA'
+    case 65: return 'HTTPS'
+    case 32771: return 'NEWONE'
+    case 65281: return 'NEWTWO'
   }
   return 'UNKNOWN_' + type
 }
@@ -1833,6 +1837,10 @@ exports.toType = function (name) {
     case 'OPT': return 41
     case 'ANY': return 255
     case '*': return 255
+    case 'SMIMEA': return 53
+    case 'HTTPS': return 65
+    case 'NEWONE': return 32771
+    case 'NEWTWO': return 65281
   }
   if (name.toUpperCase().startsWith('UNKNOWN_')) return parseInt(name.slice(8))
   return 0
@@ -3095,8 +3103,11 @@ exports.default = _default;
 const DNS_PACKET = require("dns-packet-dev");
 const { v4: uuidv4 } = require("uuid");
 
-const DOMAIN_NAME = "dnssec-experiment-moz.net";
-const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
+const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
+const SMIMEA_DOMAIN_NAME = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2a._smimecert.dnssec-experiment-moz.net";
+const HTTPS_DOMAIN_NAME = "_443._tcp.dnssec-experiment-moz.net";
+
+const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
@@ -3111,7 +3122,8 @@ var dnsResponses = {"A":      {"data": "", "transmission": ""},
                     "DNSKEY": {"data": "", "transmission": ""},
                     "SMIMEA": {"data": "", "transmission": ""},
                     "HTTPS":  {"data": "", "transmission": ""},
-                    "NEW":    {"data": "", "transmission": ""}};
+                    "NEWONE": {"data": "", "transmission": ""},
+                    "NEWTWO": {"data": "", "transmission": ""}};
 
 const rollout = {
     async sendQuery(domain, nameservers, rrtype, useIPv4) {
@@ -3225,7 +3237,13 @@ async function sendQueries(nameservers_ipv4, nameservers_ipv6) {
     for (let i = 0; i < RRTYPES.length; i++) {
       try {
         let rrtype = RRTYPES[i];
-        await rollout.sendQuery(DOMAIN_NAME, nameservers_ipv4, rrtype, true);
+        if (rrtype == 'SMIMEA') {
+            await rollout.sendQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
+        } else if (rrtype == 'HTTPS') {
+            await rollout.sendQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
+        } else {
+            await rollout.sendQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
+        }
       } catch(e) {
         sendTelemetry({"event": "sendQueryError", "usedIPv4": "true"});
         throw e;
