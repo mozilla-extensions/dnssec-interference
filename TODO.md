@@ -1,6 +1,8 @@
 ## Major TODOs ##
 * Set up custom record types with Cloudflare folks
-* Set up TCP sockets to transmit requests side by side with UDP sockets
+* Set up TCP sockets to transmit requests side by side with UDP sockets, and
+  potentially remove the usage of multiple sockets, since we're now sending
+  queries in a linear fashion
 
 ## Minor TODOs ##
 * Figure out if we should set a random ID value for each DNS request
