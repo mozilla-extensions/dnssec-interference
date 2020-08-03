@@ -53,10 +53,10 @@ const rollout = {
                 dnsResponses[rrtype]["transmission"] = j;
                 let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype, useIPv4);
                 if (written <= 0) {
-                    sendTelemetry({"event": "sendDNSQueryError", 
-                                   "rrtype": rrtype, 
-                                   "transmission": j.toString(), 
-                                   "usedIPv4": "true"});
+                    // sendTelemetry({"event": "sendDNSQueryError", 
+                    //                "rrtype": rrtype, 
+                    //                "transmission": j.toString(), 
+                    //                "usedIPv4": "true"});
                 }
                 await sleep(RESOLVCONF_TIMEOUT);
 
@@ -93,12 +93,12 @@ async function readNameservers() {
         nameservers = await browser.experiments.resolvconf.readNameserversMac();
         // nameservers = await browser.experiments.resolvconf.readNameserversWin();
     } catch(e) {
-        sendTelemetry({"event": "readNameserversError"});
+        // sendTelemetry({"event": "readNameserversError"});
         throw e;
     } 
 
     if (!Array.isArray(nameservers) || nameservers.length <= 0) {
-        sendTelemetry({"event": "noNameserversError"});
+        // sendTelemetry({"event": "noNameserversError"});
         throw e;
     }
 
@@ -127,7 +127,7 @@ async function setupNetworkingCode() {
     } catch(e) {
         // Since we're just using IPv4 sockets right now, 
         // hard-code "usedIPv4" to "true."
-        sendTelemetry({"event": "openSocketError", "usedIPv4": "true"});
+        // sendTelemetry({"event": "openSocketError", "usedIPv4": "true"});
         throw e;
     }
 }
@@ -144,7 +144,7 @@ async function sendQueries(nameservers_ipv4, nameservers_ipv6) {
             await rollout.sendQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
         }
       } catch(e) {
-        sendTelemetry({"event": "sendQueryError", "usedIPv4": "true"});
+        // sendTelemetry({"event": "sendQueryError", "usedIPv4": "true"});
         throw e;
       }
     }
@@ -163,7 +163,7 @@ function cleanup() {
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
     measurement_id = uuidv4();
-    sendTelemetry({"event": "startMeasurement"});
+    // sendTelemetry({"event": "startMeasurement"});
 
     let nameservers = await readNameservers();
     let nameservers_ipv4 = nameservers[0];
@@ -174,7 +174,7 @@ async function runMeasurement() {
     await sendQueries(nameservers_ipv4, nameservers_ipv6);
 
     // Send a ping to indicate the start of the measurement
-    sendTelemetry({"event": "endMeasurement"});
+    // sendTelemetry({"event": "endMeasurement"});
     cleanup();
 }
 
