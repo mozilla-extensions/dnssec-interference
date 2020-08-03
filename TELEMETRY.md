@@ -61,7 +61,7 @@ sent. Each error has its own ping. The error pings looks like this:
 
 ```
 event: (readNameserversError, noNameserversError, noIPv4NameserversError,
-openSocektError, sendQueryError),
+openSocketError, sendQueryError),
 measurement_id: <UUID string goes here>
 ```
 
