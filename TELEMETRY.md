@@ -20,7 +20,7 @@ sends the usual packets.
 - This add-on opens UDP sockets at browser startup and sends DNS requests for a 
 domain name that we control. We request seven different resource record types, 
 re-transmitting if necessary. We wait for the DNS 
-responses and then encapsulate the raw bytes into a ping. For each 
+responses and then encapsulate the raw bytes into a ping, excluding any IP or UDP headers. For each 
 record type, we also record how many transmissions were necessary to receive a
 response. An example ping
 containing the DNS responses looks like this, where each keyword before `_data`
