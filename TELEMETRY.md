@@ -15,7 +15,7 @@ This study has no study-specific endings.
 [shield-studies-addon-utils](https://github.com/mozilla/shield-studies-addon-utils)
 sends the usual packets.
 
-## ## `shield-study-addon` pings, specific to THIS study.
+## `shield-study-addon` pings, specific to THIS study.
 
 - This add-on opens UDP sockets at browser startup and sends DNS requests for a 
 domain name that we control. We request seven different resource record types, 
