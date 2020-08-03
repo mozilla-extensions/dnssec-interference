@@ -19,12 +19,20 @@ sends the usual packets.
 
 - This add-on opens UDP sockets at browser startup and sends DNS requests for a 
 domain name that we control. We request seven different resource record types, 
-re-transmitting if necessary. We wait for the DNS 
+re-transmitting if necessrry: 
+
+- A
+- RRSIG
+- DNSKEY
+- SMIMEA
+- HTTPS
+- NEWONE (a custom resource record type that we created for this study)
+- NEWTWO (an additional custom resource record type that we created for this study)
+
+We wait for the DNS 
 responses and then encapsulate the raw bytes into a ping, excluding any IP or UDP headers. For each 
-record type, we also record how many transmissions were necessary to receive a
-response. An example ping
-containing the DNS responses looks like this, where each keyword before `_data`
-and `_transmission` corresponds to a DNS resource record type:
+record type, we also record how many transmissions were sent. An example ping
+containing the DNS responses takes the following form:
 
 ```
 event: "dnsResponses"
@@ -48,7 +56,7 @@ NEWTWO_transmission: "1"
 - We also send a ping at browser startup that simply indicates the beginning of 
 the experiment for a given browser session. Similarly, we send another ping 
 after the DNS response ping has been sent to indicate the end of the experiment 
-for a given browser session. These pings looks like:
+for a given browser session. These pings take the following form:
 
 ```
 event: (measurementStart, measurementEnd),
@@ -57,7 +65,7 @@ measurement_id: <UUID string goes here>
 
 - Lastly, we send a ping if any error occurs, i.e. if UDP sockets failed to 
 open, no nameservers could be read from disk, or if a DNS request could not be 
-sent. Each error has its own ping. The error pings looks like this:
+sent. Each error has its own ping. The error pings take the following form:
 
 ```
 event: (readNameserversError, noNameserversError, noIPv4NameserversError,
