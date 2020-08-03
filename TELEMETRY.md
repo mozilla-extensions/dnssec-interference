@@ -21,13 +21,13 @@ sends the usual packets.
 domain name that we control. We request seven different resource record types, 
 re-transmitting if necessrry: 
 
-- A
-- RRSIG
-- DNSKEY
-- SMIMEA
-- HTTPS
-- NEWONE (a custom resource record type that we created for this study)
-- NEWTWO (an additional custom resource record type that we created for this study)
+  - A
+  - RRSIG
+  - DNSKEY
+  - SMIMEA
+  - HTTPS
+  - NEWONE (a custom resource record type that we created for this study)
+  - NEWTWO (an additional custom resource record type that we created for this study)
 
 We wait for the DNS 
 responses and then encapsulate the raw bytes into a ping, excluding any IP or UDP headers. For each 
