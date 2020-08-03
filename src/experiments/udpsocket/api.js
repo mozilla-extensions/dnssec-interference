@@ -43,8 +43,8 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               context,
               name: "experiments.udpsocket.onDNSResponseReceived",
               register: fire => {
-                const callback = (rawData, rrtype, usedIPv4) => {
-                    fire.async(rawData, rrtype, usedIPv4);
+                const callback = (rawData, rrtype) => {
+                    fire.async(rawData, rrtype);
                 };
                 for (const rrtype in sockets_ipv4) {
                     let socket = sockets_ipv4[rrtype];
@@ -67,13 +67,11 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               }
           }).api(),
 
-          sendDNSQuery(addr, buf, rrtype, useIPv4) {
+          sendDNSQuery(addr, buf, rrtype) {
             let written;
-            if (useIPv4) {
-              let socket = sockets_ipv4[rrtype];
-              written = socket.send(addr, 53, buf, buf.length);
-              console.log(addr, written);
-            }
+            let socket = sockets_ipv4[rrtype];
+            written = socket.send(addr, 53, buf, buf.length);
+            console.log(addr, written);
             return written;
           },
         },
