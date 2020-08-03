@@ -1322,9 +1322,6 @@ const renc = exports.record = function (type) {
     case 'NSEC': return rnsec
     case 'NSEC3': return rnsec3
     case 'DS': return rds
-    case 'SMIMEA': return runknown 
-    case 'HTTPS': return runknown 
-    case 'NEW': return runknown
   }
   return runknown
 }
@@ -1785,9 +1782,6 @@ exports.toString = function (type) {
     case 251: return 'IXFR'
     case 41: return 'OPT'
     case 255: return 'ANY'
-    case 53: return 'SMIMEA'
-    case 65: return 'HTTPS'
-    case 300: return 'NEW'
   }
   return 'UNKNOWN_' + type
 }
@@ -1839,9 +1833,6 @@ exports.toType = function (name) {
     case 'OPT': return 41
     case 'ANY': return 255
     case '*': return 255
-    case 'SMIMEA': return 53
-    case 'HTTPS': return 65
-    case 'NEW': return 300
   }
   if (name.toUpperCase().startsWith('UNKNOWN_')) return parseInt(name.slice(8))
   return 0
@@ -3101,7 +3092,7 @@ var _default = version;
 exports.default = _default;
 },{"./validate.js":21}],23:[function(require,module,exports){
 /* global browser */
-const DNS_PACKET = require("dns-packet-fork");
+const DNS_PACKET = require("dns-packet-dev");
 const { v4: uuidv4 } = require("uuid");
 
 const DOMAIN_NAME = "dnssec-experiment-moz.net";
@@ -3109,11 +3100,11 @@ const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEW'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
-const MEASUREMENT_ID = uuidv4();
 const TELEMETRY_PIPELINE = "shield";
 
 var nameservers = [];
 var query_proto;
+var measurement_id;
 
 var dnsResponses = {"A":      {"data": "", "transmission": ""},
                     "RRSIG":  {"data": "", "transmission": ""},
@@ -3244,7 +3235,7 @@ async function sendQueries(nameservers_ipv4, nameservers_ipv6) {
 }
 
 function sendTelemetry(payload) {
-    payload["measurement_id"] = MEASUREMENT_ID;
+    payload["measurement_id"] = measurement_id;
     browser.study.sendTelemetry(payload, TELEMETRY_PIPELINE);
 }
 
@@ -3254,6 +3245,7 @@ function cleanup() {
 
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
+    measurement_id = uuidv4();
     sendTelemetry({"event": "startMeasurement"});
 
     let nameservers = await readNameservers();
@@ -3271,7 +3263,7 @@ async function runMeasurement() {
 
 runMeasurement();
 
-},{"dns-packet-fork":2,"uuid":8}],24:[function(require,module,exports){
+},{"dns-packet-dev":2,"uuid":8}],24:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength

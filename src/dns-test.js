@@ -1,5 +1,5 @@
 /* global browser */
-const DNS_PACKET = require("dns-packet-fork");
+const DNS_PACKET = require("dns-packet-dev");
 const { v4: uuidv4 } = require("uuid");
 
 const DOMAIN_NAME = "dnssec-experiment-moz.net";

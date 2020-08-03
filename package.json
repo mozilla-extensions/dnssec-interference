@@ -13,7 +13,7 @@
   },
   "homepage": "https://github.com/ahounse/dnssec-interference#readme",
   "dependencies": {
-    "dns-packet": "^5.2.1",
+    "dns-packet-dev": "file:forked_modules/dns-packet-dev",
     "shield-studies-addon-utils": "^6.0.0",
     "uuid": "^8.3.0"
   },
