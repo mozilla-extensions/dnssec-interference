@@ -17,7 +17,7 @@ sends the usual packets.
 
 ## `shield-study-addon` pings, specific to THIS study.
 
-- This add-on opens UDP sockets at browser startup and sends DNS requests for a 
+- This add-on opens UDP and TCP sockets at browser startup and sends DNS requests for a 
 domain name that we control. We request seven different resource record types, 
 re-transmitting if necessrry: 
 
@@ -36,20 +36,20 @@ containing the DNS responses takes the following form:
 
 ```
 event: "dnsResponses"
-measurement_id: <UUID string goes here>
-A_data: <Uint8Array converted to a string>,
+measurement_id: ...
+A_data: ...
 A_transmission: "1",
-RRSIG_data: <Uint8Array converted to a string>,
-RRSIG_transmission: "1",
-DNSKEY_data: <Uint8Array converted to a string>,
+RRSIG_data: ...
+RRSIG_transmission: "2",
+DNSKEY_data: ...
 DNSKEY_transmission: "1",
-SMIMEA_data: <Uint8Array converted to a string>,
-SMIMEA_transmission: "1",
-HTTPS_data: <Uint8Array converted to a string>,
+SMIMEA_data: ...
+SMIMEA_transmission: "3",
+HTTPS_data: ...
 HTTPS_transmission: "1",
-NEWONE_data: <Uint8Array converted to a string>,
+NEWONE_data: ...
 NEWONE_transmission: "1",
-NEWTWO_data: <Uint8Array converted to a string>,
+NEWTWO_data: ...
 NEWTWO_transmission: "1"
 ```
 
@@ -60,7 +60,7 @@ for a given browser session. These pings take the following form:
 
 ```
 event: (measurementStart, measurementEnd),
-measurement_id: <UUID string goes here>
+measurement_id: ...
 ```
 
 - Lastly, we send a ping if any error occurs, i.e. if UDP sockets failed to 
@@ -70,7 +70,7 @@ sent. Each error has its own ping. The error pings take the following form:
 ```
 event: (readNameserversError, noNameserversError, noIPv4NameserversError,
 openSocketError, sendQueryError),
-measurement_id: <UUID string goes here>
+measurement_id: ...
 ```
 
 - In all of the pings, `measurement_id` is a UUID that is added to represent a
