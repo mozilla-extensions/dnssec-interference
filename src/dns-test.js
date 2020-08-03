@@ -16,13 +16,13 @@ var nameservers = [];
 var query_proto;
 var measurement_id;
 
-var dnsResponses = {"A":      {"data": "", "transmission": ""},
-                    "RRSIG":  {"data": "", "transmission": ""},
-                    "DNSKEY": {"data": "", "transmission": ""},
-                    "SMIMEA": {"data": "", "transmission": ""},
-                    "HTTPS":  {"data": "", "transmission": ""},
-                    "NEWONE": {"data": "", "transmission": ""},
-                    "NEWTWO": {"data": "", "transmission": ""}};
+var dnsResponses = {"A":      {"data": "", "transmission": 0},
+                    "RRSIG":  {"data": "", "transmission": 0},
+                    "DNSKEY": {"data": "", "transmission": 0},
+                    "SMIMEA": {"data": "", "transmission": 0},
+                    "HTTPS":  {"data": "", "transmission": 0},
+                    "NEWONE": {"data": "", "transmission": 0},
+                    "NEWTWO": {"data": "", "transmission": 0}};
 
 const rollout = {
     async sendQuery(domain, nameservers, rrtype) {
@@ -50,7 +50,7 @@ const rollout = {
         for (let i = 0; i < nameservers.length; i++) {
             for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
                 let nameserver = nameservers[i];
-                dnsResponses[rrtype]["transmission"] = j;
+                dnsResponses[rrtype]["transmission"] += 1
                 let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
                 if (written <= 0) {
                     // sendTelemetry({"event": "sendDNSQueryError", 
@@ -59,7 +59,7 @@ const rollout = {
                 }
                 await sleep(RESOLVCONF_TIMEOUT);
 
-                if (isUndefined(dnsResponses[rrtype]["data"])) {
+                if (isUndefined(dnsResponses[rrtype]["data"]) || dnsResponses[rrtype]["data"] === "") {
                     console.log("Need to re-transmit");
                 } else {
                     return
@@ -143,7 +143,15 @@ async function sendQueries(nameservers_ipv4) {
         throw e;
       }
     }
+
     // TODO: Send DNS responses to telemetry
+    let payload = {"event": "dnsResponses"};
+    for (const rrtype in dnsResponses) {
+       payload[rrtype + "_data"] = dnsResponses[rrtype]["data"].toString();
+       payload[rrtype + "_transmission"] = dnsResponses[rrtype]["transmission"].toString();
+    }
+    console.log(payload);
+    // sendTelemetry(payload);
 }
 
 function sendTelemetry(payload) {
