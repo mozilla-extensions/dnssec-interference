@@ -10,7 +10,12 @@ const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
-const TELEMETRY_PIPELINE = "shield";
+const TELEMETRY_TYPE = "dnssec-interference-report";
+const TELEMETRY_OPTIONS = {
+    addClientId: true,
+    addEnvironment: true
+};
+
 const MAX_TXID = 65535;
 const MIN_TXID = 0;
 
@@ -165,7 +170,7 @@ async function sendQueries(nameservers_ipv4) {
 
 function sendTelemetry(payload) {
     payload["measurement_id"] = measurement_id;
-    browser.study.sendTelemetry(payload, TELEMETRY_PIPELINE);
+    browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
 function cleanup() {
