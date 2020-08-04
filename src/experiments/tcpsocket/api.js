@@ -11,16 +11,16 @@ const { TCPSocket } = Cu.getGlobalForObject(
 );
 const { EventManager} = ExtensionCommon;
 
-const socket_ipv4_a         = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_aaaa      = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_rrsig     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_dnskey    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_smimea    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_https     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_newone    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_newtwo    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+var socket_ipv4_a;
+var socket_ipv4_aaaa;
+var socket_ipv4_rrsig;
+var socket_ipv4_dnskey;
+var socket_ipv4_smimea;
+var socket_ipv4_https;
+var socket_ipv4_newone;
+var socket_ipv4_newtwo;
 
-const sockets_ipv4 = {"A":      socket_ipv4_a,
+var sockets_ipv4 =   {"A":      socket_ipv4_a,
                       "RRSIG":  socket_ipv4_rrsig,
                       "DNSKEY": socket_ipv4_dnskey, 
                       "SMIMEA": socket_ipv4_smimea,
@@ -157,18 +157,20 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
       experiments: {
         tcpsocket: {
           async openSocket() {
-            let clientSocket = new TCPSocket("10.8.0.5", 53, {
-                binaryType: "arraybuffer",
-            });
-            let clientQueue = listenForEventsOnSocket(clientSocket, "client");
-            console.log("Socket initiated");
+            for (const rrtype in sockets_ipv4) {
+                sockets_ipv4[rrtype] = new TCPSocket("10.8.0.5", 53, {
+                    binaryType: "arraybuffer",
+                });
+                let clientQueue = listenForEventsOnSocket(sockets_ipv4[rrtype], "client");
+                console.log(rrtype + " TCP socket initiated");
 
-            // (the client connects)
-            let nextEvent = (await clientQueue.waitForEvent()).type;
-            if (nextEvent == "open" && clientSocket.readyState == "open") {
-                console.log("client opened socket and readyState is open");
-            } else {
-                throw new Error("Could not open TCP socket");
+                // (the client connects)
+                let nextEvent = (await clientQueue.waitForEvent()).type;
+                if (nextEvent == "open" && sockets_ipv4[rrtype].readyState == "open") {
+                    console.log("client opened socket and readyState is open");
+                } else {
+                    throw new Error("Could not open TCP socket");
+                }
             }
           },
 
