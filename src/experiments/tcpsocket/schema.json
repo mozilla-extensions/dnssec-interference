@@ -1,0 +1,52 @@
+[
+  {
+    "namespace": "experiments.tcpsocket",
+    "description": "TCP Client Socket implementation",
+    "events": [
+        {
+            "name": "onDNSResponseReceived",
+            "type": "function",
+            "description": "Description of the event",
+            "parameters": [
+                {
+                    "name": "responseBytes",
+                    "type": "any",
+                    "description": "DNS response packet in bytes"
+                }
+            ]
+        }
+    ],
+    "functions": [
+      {
+        "name": "openSocket",
+        "type": "function",
+        "description": "This method initializes a TCP socket.",
+        "parameters": [],
+        "async": true
+      },
+      {
+        "name": "sendDNSQuery",
+        "type": "function",
+        "description": "This method initializes a TCP socket.",
+        "parameters": [
+            {
+                "type": "string",
+                "name": "addr",
+                "description": "Address of DNS recursive resolver"
+            },
+            {
+                "type": "any",
+                "name": "buf",
+                "description": "DNS packet to send as a byte array"
+            },
+            {
+                "type": "string",
+                "name": "rrtype",
+                "description": "RR type that is being queried"
+            }
+        ],
+        "async": true 
+      }
+    ]
+  }
+]

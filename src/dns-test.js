@@ -117,12 +117,21 @@ async function readNameservers() {
     return nameservers_ipv4;
 }
 
-async function setupNetworkingCode() {
+async function setupUPDSockets() {
     try {
         await browser.experiments.udpsocket.openSocket();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
     } catch(e) {
-        // sendTelemetry({"event": "openSocketError"});
+        // sendTelemetry({"event": "openUDPSocketsError"});
+        throw e;
+    }
+}
+
+async function setupTCPSockets() {
+    try {
+        await browser.experiments.tcpsocket.openSocket();
+    } catch(e) {
+        // sendTelemetry({"event": "openTCPSocketsError"});
         throw e;
     }
 }
@@ -169,12 +178,13 @@ async function runMeasurement() {
     // sendTelemetry({"event": "startMeasurement"});
 
     let nameservers_ipv4 = await readNameservers();
-    await setupNetworkingCode();
-    await sendQueries(nameservers_ipv4);
+    // await setupUDPSockets();
+    await setupTCPSockets();
+    // await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
     // sendTelemetry({"event": "endMeasurement"});
-    cleanup();
+    // cleanup();
 }
 
 runMeasurement();
