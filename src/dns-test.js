@@ -53,7 +53,7 @@ const rollout = {
                 dnsResponses[rrtype]["transmission"] += 1
                 let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
                 if (written <= 0) {
-                    // sendTelemetry({"event": "sendDNSQueryError", 
+                    // sendTelemetry({"event": "noBytesWritenError", 
                     //                "rrtype": rrtype, 
                     //                "transmission": j.toString()});
                 }
