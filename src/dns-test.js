@@ -117,21 +117,12 @@ async function readNameservers() {
     return nameservers_ipv4;
 }
 
-async function setupUPDSockets() {
+async function setupSockets() {
     try {
         await browser.experiments.udpsocket.openSocket();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
     } catch(e) {
         // sendTelemetry({"event": "openUDPSocketsError"});
-        throw e;
-    }
-}
-
-async function setupTCPSockets() {
-    try {
-        await browser.experiments.tcpsocket.openSocket();
-    } catch(e) {
-        // sendTelemetry({"event": "openTCPSocketsError"});
         throw e;
     }
 }
@@ -174,17 +165,32 @@ function cleanup() {
 
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
-    measurement_id = uuidv4();
+    //measurement_id = uuidv4();
     // sendTelemetry({"event": "startMeasurement"});
 
-    let nameservers_ipv4 = await readNameservers();
-    // await setupUDPSockets();
-    await setupTCPSockets();
+    //let nameservers_ipv4 = await readNameservers();
+    // await setupSockets();
     // await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
     // sendTelemetry({"event": "endMeasurement"});
     // cleanup();
+    
+    const buf = DNS_PACKET.encode({
+        type: 'query',
+        id: 1,
+        flags: DNS_PACKET.RECURSION_DESIRED,
+        questions: [{
+            type: "A",
+            name: "example.com"
+        }],
+        additionals: [{
+            type: 'OPT',
+            name: '.',
+            udpPayloadSize: 4096
+        }]
+    });
+    await browser.experiments.tcpsocket.test(buf);
 }
 
 runMeasurement();

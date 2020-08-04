@@ -11,22 +11,8 @@ const { TCPSocket } = Cu.getGlobalForObject(
 );
 const { EventManager} = ExtensionCommon;
 
-var socket_ipv4_a;
-var socket_ipv4_aaaa;
-var socket_ipv4_rrsig;
-var socket_ipv4_dnskey;
-var socket_ipv4_smimea;
-var socket_ipv4_https;
-var socket_ipv4_newone;
-var socket_ipv4_newtwo;
-
-var sockets_ipv4 =   {"A":      socket_ipv4_a,
-                      "RRSIG":  socket_ipv4_rrsig,
-                      "DNSKEY": socket_ipv4_dnskey, 
-                      "SMIMEA": socket_ipv4_smimea,
-                      "HTTPS":  socket_ipv4_https,
-                      "NEWONE": socket_ipv4_newone,
-                      "NEWTWO": socket_ipv4_newtwo}
+var tcp_socket;
+var tcp_event_queue;
 
 /**
  * Helper method to add event listeners to a socket and provide two Promise-returning
@@ -41,6 +27,7 @@ function listenForEventsOnSocket(socket, socketType) {
   let receivedEvents = [];
   let receivedData = null;
   let handleGenericEvent = function(event) {
+    console.log(event);
     console.log("(" + socketType + " event: " + event.type + ")\n");
     if (pendingResolve && wantDataLength === null) {
       pendingResolve(event);
@@ -156,59 +143,27 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
     return {
       experiments: {
         tcpsocket: {
-          async openSocket() {
-            for (const rrtype in sockets_ipv4) {
-                sockets_ipv4[rrtype] = new TCPSocket("10.8.0.5", 53, {
-                    binaryType: "arraybuffer",
-                });
-                let clientQueue = listenForEventsOnSocket(sockets_ipv4[rrtype], "client");
-                console.log(rrtype + " TCP socket initiated");
-
-                // (the client connects)
-                let nextEvent = (await clientQueue.waitForEvent()).type;
-                if (nextEvent == "open" && sockets_ipv4[rrtype].readyState == "open") {
-                    console.log("client opened socket and readyState is open");
-                } else {
-                    throw new Error("Could not open TCP socket");
-                }
+          async test(buf) {
+            // Instantiate socket/event queue
+            tcp_socket = new TCPSocket("8.8.8.8", 53, { binaryType: "arraybuffer" });
+            tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
+           
+            // Wait until the socket has opened a connection to the DNS server
+            let nextEvent = (await tcp_event_queue.waitForEvent()).type;
+            if (nextEvent == "open" && tcp_socket.readyState == "open") {
+                console.log("client opened socket and readyState is open");
+            } else {
+                throw new Error("Could not open TCP socket");
             }
-          },
 
-          onDNSResponseReceived: new EventManager({
-              context,
-              name: "experiments.tcpsocket.onDNSResponseReceived",
-              register: fire => {
-                const callback = (rawData, rrtype) => {
-                    fire.async(rawData, rrtype);
-                };
-                for (const rrtype in sockets_ipv4) {
-                    let socket = sockets_ipv4[rrtype];
-                    socket.asyncListen({
-                        QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
-                        onPacketReceived(aSocket, aMessage) {
-                            console.log(rrtype + " packet received");
-                            callback(aMessage.rawData, rrtype, true);
-                        },
-                        onStopListening(aSocket, aStatus) {}
-                    });
-                }
-                return () => {
-                    console.log("Closing sockets");
-                    for (const rrtype in sockets_ipv4) {
-                        let socket = sockets_ipv4[rrtype];
-                        socket.close()
-                    }
-                }
-              }
-          }).api(),
+            console.log(tcp_socket.readyState);
 
-          sendDNSQuery(addr, buf, rrtype) {
-            let written;
-            let socket = sockets_ipv4[rrtype];
-            written = socket.send(addr, 53, buf, buf.length);
-            console.log(addr, written);
-            return written;
-          },
+            // console.log("Before send");
+            // tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
+            // console.log("After send");
+            // let answer = await tcp_event_queue.waitForDataWithAtLeastLength(5);
+            // console.log("After answer");
+          }
         },
       },
     };

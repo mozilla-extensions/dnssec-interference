@@ -3107,8 +3107,7 @@ const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2a._smimecert.dnssec-experiment-moz.net";
 const HTTPS_DOMAIN_NAME = "_443._tcp.dnssec-experiment-moz.net";
 
-// const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
-const RRTYPES = ['SMIMEA'];
+const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
@@ -3155,7 +3154,7 @@ const rollout = {
                 dnsResponses[rrtype]["transmission"] += 1
                 let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
                 if (written <= 0) {
-                    // sendTelemetry({"event": "sendDNSQueryError", 
+                    // sendTelemetry({"event": "noBytesWritenError", 
                     //                "rrtype": rrtype, 
                     //                "transmission": j.toString()});
                 }
@@ -3219,12 +3218,12 @@ async function readNameservers() {
     return nameservers_ipv4;
 }
 
-async function setupNetworkingCode() {
+async function setupSockets() {
     try {
         await browser.experiments.udpsocket.openSocket();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
     } catch(e) {
-        // sendTelemetry({"event": "openSocketError"});
+        // sendTelemetry({"event": "openUDPSocketsError"});
         throw e;
     }
 }
@@ -3267,16 +3266,32 @@ function cleanup() {
 
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
-    measurement_id = uuidv4();
+    //measurement_id = uuidv4();
     // sendTelemetry({"event": "startMeasurement"});
 
-    let nameservers_ipv4 = await readNameservers();
-    await setupNetworkingCode();
-    await sendQueries(nameservers_ipv4);
+    //let nameservers_ipv4 = await readNameservers();
+    // await setupSockets();
+    // await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
     // sendTelemetry({"event": "endMeasurement"});
-    cleanup();
+    // cleanup();
+    
+    const buf = DNS_PACKET.encode({
+        type: 'query',
+        id: 1,
+        flags: DNS_PACKET.RECURSION_DESIRED,
+        questions: [{
+            type: "A",
+            name: "example.com"
+        }],
+        additionals: [{
+            type: 'OPT',
+            name: '.',
+            udpPayloadSize: 4096
+        }]
+    });
+    await browser.experiments.tcpsocket.test(buf);
 }
 
 runMeasurement();
