@@ -3,9 +3,9 @@
 * Set up TCP sockets to transmit requests side by side with UDP sockets, and
   potentially remove the usage of multiple sockets, since we're now sending
   queries in a linear fashion
+* Serialize DNS responses into base64 strings
 
 ## Minor TODOs ##
-* Figure out if we should set a random ID value for each DNS request
 * Come up with a less-hacky way of storing the __proto__ for the object created
   by dns-packet.encode()
 * Figure out a better way to include Node.js modules without using browserify on
@@ -22,3 +22,4 @@ dns-test.js to create background.js
 * Create a unique IPv4 socket per RRtype in order to know which response we 
 didn't receive
 * Add random UUID to pings that will be used each time the extension is loaded
+* Use a random transaction ID for each DNS request
