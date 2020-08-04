@@ -127,15 +127,6 @@ async function setupUPDSockets() {
     }
 }
 
-async function setupTCPSockets() {
-    try {
-        await browser.experiments.tcpsocket.openSocket();
-    } catch(e) {
-        // sendTelemetry({"event": "openTCPSocketsError"});
-        throw e;
-    }
-}
-
 async function sendQueries(nameservers_ipv4) {
     for (let i = 0; i < RRTYPES.length; i++) {
       try {
@@ -178,13 +169,12 @@ async function runMeasurement() {
     // sendTelemetry({"event": "startMeasurement"});
 
     let nameservers_ipv4 = await readNameservers();
-    // await setupUDPSockets();
-    await setupTCPSockets();
-    // await sendQueries(nameservers_ipv4);
+    await setupUDPSockets();
+    await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
     // sendTelemetry({"event": "endMeasurement"});
-    // cleanup();
+    cleanup();
 }
 
 runMeasurement();
