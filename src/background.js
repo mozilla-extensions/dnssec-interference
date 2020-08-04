@@ -3107,8 +3107,7 @@ const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2a._smimecert.dnssec-experiment-moz.net";
 const HTTPS_DOMAIN_NAME = "_443._tcp.dnssec-experiment-moz.net";
 
-// const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
-const RRTYPES = ['SMIMEA'];
+const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
@@ -3155,7 +3154,7 @@ const rollout = {
                 dnsResponses[rrtype]["transmission"] += 1
                 let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
                 if (written <= 0) {
-                    // sendTelemetry({"event": "sendDNSQueryError", 
+                    // sendTelemetry({"event": "noBytesWritenError", 
                     //                "rrtype": rrtype, 
                     //                "transmission": j.toString()});
                 }
@@ -3190,9 +3189,14 @@ function sleep(ms) {
 }
 
 async function readNameservers() {
-    try{ 
-        nameservers = await browser.experiments.resolvconf.readNameserversMac();
-        // nameservers = await browser.experiments.resolvconf.readNameserversWin();
+    let nameservers = [];
+    try { 
+        let platform = await browser.runtime.getPlatformInfo();
+        if (platform.os == "mac") {
+            nameservers = await browser.experiments.resolvconf.readNameserversMac();
+        } else if (platform.os == "win") {
+            nameservers = await browser.experiments.resolvconf.readNameserversWin();
+        }
     } catch(e) {
         // sendTelemetry({"event": "readNameserversError"});
         throw e;
@@ -3219,12 +3223,12 @@ async function readNameservers() {
     return nameservers_ipv4;
 }
 
-async function setupNetworkingCode() {
+async function setupUPDSockets() {
     try {
         await browser.experiments.udpsocket.openSocket();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
     } catch(e) {
-        // sendTelemetry({"event": "openSocketError"});
+        // sendTelemetry({"event": "openUDPSocketsError"});
         throw e;
     }
 }
@@ -3271,12 +3275,12 @@ async function runMeasurement() {
     // sendTelemetry({"event": "startMeasurement"});
 
     let nameservers_ipv4 = await readNameservers();
-    await setupNetworkingCode();
-    await sendQueries(nameservers_ipv4);
+    // await setupUDPSockets();
+    // await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
     // sendTelemetry({"event": "endMeasurement"});
-    cleanup();
+    // cleanup();
 }
 
 runMeasurement();

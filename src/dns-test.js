@@ -88,9 +88,14 @@ function sleep(ms) {
 }
 
 async function readNameservers() {
-    try{ 
-        nameservers = await browser.experiments.resolvconf.readNameserversMac();
-        // nameservers = await browser.experiments.resolvconf.readNameserversWin();
+    let nameservers = [];
+    try { 
+        let platform = await browser.runtime.getPlatformInfo();
+        if (platform.os == "mac") {
+            nameservers = await browser.experiments.resolvconf.readNameserversMac();
+        } else if (platform.os == "win") {
+            nameservers = await browser.experiments.resolvconf.readNameserversWin();
+        }
     } catch(e) {
         // sendTelemetry({"event": "readNameserversError"});
         throw e;
@@ -169,12 +174,12 @@ async function runMeasurement() {
     // sendTelemetry({"event": "startMeasurement"});
 
     let nameservers_ipv4 = await readNameservers();
-    await setupUDPSockets();
-    await sendQueries(nameservers_ipv4);
+    // await setupUDPSockets();
+    // await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
     // sendTelemetry({"event": "endMeasurement"});
-    cleanup();
+    // cleanup();
 }
 
 runMeasurement();
