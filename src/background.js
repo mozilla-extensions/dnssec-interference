@@ -3111,7 +3111,14 @@ const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2;
 
-const TELEMETRY_PIPELINE = "shield";
+const TELEMETRY_TYPE = "dnssec-interference-report";
+const TELEMETRY_OPTIONS = {
+    addClientId: true,
+    addEnvironment: true
+};
+
+const MAX_TXID = 65535;
+const MIN_TXID = 0;
 
 var nameservers = [];
 var query_proto;
@@ -3130,7 +3137,7 @@ const rollout = {
         let written = 0;
         const buf = DNS_PACKET.encode({
             type: 'query',
-            id: 1,
+            id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID, // Generate a random transaction ID between 0 and 65535
             flags: DNS_PACKET.RECURSION_DESIRED,
             questions: [{
                 type: rrtype,
@@ -3223,7 +3230,7 @@ async function readNameservers() {
     return nameservers_ipv4;
 }
 
-async function setupUPDSockets() {
+async function setupUDPSockets() {
     try {
         await browser.experiments.udpsocket.openSocket();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processDNSResponse);
@@ -3250,11 +3257,13 @@ async function sendQueries(nameservers_ipv4) {
       }
     }
 
-    // TODO: Send DNS responses to telemetry
+
+    // TODO: Send Telemetry for DNS responses, ensuring that we convert the data to base64 strings if necessary
+    const encoder = new TextEncoder();
     let payload = {"event": "dnsResponses"};
     for (const rrtype in dnsResponses) {
-       payload[rrtype + "_data"] = dnsResponses[rrtype]["data"].toString();
-       payload[rrtype + "_transmission"] = dnsResponses[rrtype]["transmission"].toString();
+       payload[rrtype + "_data"] = dnsResponses[rrtype]["data"];
+       payload[rrtype + "_transmission"] = dnsResponses[rrtype]["transmission"];
     }
     console.log(payload);
     // sendTelemetry(payload);
@@ -3262,7 +3271,7 @@ async function sendQueries(nameservers_ipv4) {
 
 function sendTelemetry(payload) {
     payload["measurement_id"] = measurement_id;
-    browser.study.sendTelemetry(payload, TELEMETRY_PIPELINE);
+    browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
 function cleanup() {
@@ -3275,12 +3284,12 @@ async function runMeasurement() {
     // sendTelemetry({"event": "startMeasurement"});
 
     let nameservers_ipv4 = await readNameservers();
-    // await setupUDPSockets();
-    // await sendQueries(nameservers_ipv4);
+    await setupUDPSockets();
+    await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
     // sendTelemetry({"event": "endMeasurement"});
-    // cleanup();
+    cleanup();
 }
 
 runMeasurement();

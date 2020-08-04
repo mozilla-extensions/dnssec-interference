@@ -3,7 +3,6 @@
   "name": "DNSSEC Interference Study",
   "description": "Mozilla addon that measures DNSSEC interference by middleboxes",
   "version": "0.0.1",
-
   "hidden": true,
 
   "applications": {
@@ -16,10 +15,7 @@
     "telemetry"
   ],
 
-  "browser_action": {
-    "default_icon": "img/experiments-icon.svg",
-    "default_title": "DNSSSEC Study"
-  },
+  "browser_action": {},
 
   "background": {
     "scripts": ["background.js"]
