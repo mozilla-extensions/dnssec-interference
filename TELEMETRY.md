@@ -1,8 +1,6 @@
 ## Usual Firefox Telemetry is mostly unaffected
 
-- No change: `main` and other pings are UNAFFECTED by this add-on, except that 
-[shield-studies-addon-utils](https://github.com/mozilla/shield-studies-addon-utils)
-adds the add-on id as an active experiment in the telemetry environment.
+- No change: `main` and other pings are UNAFFECTED by this add-on.
 - Respects telemetry preferences. If a client has disabled telemetry, no telemetry 
 will be sent for that client.
 
@@ -10,16 +8,20 @@ will be sent for that client.
 
 This study has no study-specific endings.
 
-## `shield-study` pings (common to all shield-studies)
+## Choice of telemetry API
 
-[shield-studies-addon-utils](https://github.com/mozilla/shield-studies-addon-utils)
-sends the usual packets.
+- We will use the [browser.telemetry.submitPing()](https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/collection/webextension-api.html) API to submit custom pings
+  for our study. We will submit the pings to the `TO BE DETERMINED` telemetry bucket.
 
-## `shield-study-addon` pings, specific to THIS study.
+- We originally considered using the [shield-studies-addon-utils](https://github.com/mozilla/shield-studies-addon-utils) API to submit
+  pings to the `shield-studies-addon-utils` telemetry bucket, but we
+  were discouraged from using it by mythmon.
+
+## Custom pings, specific to THIS study.
 
 - This add-on opens UDP and TCP sockets at browser startup and sends DNS requests for a 
 domain name that we control. We request seven different resource record types, 
-re-transmitting if necessrry: 
+re-transmitting if necessary: 
 
   - A
   - RRSIG
@@ -37,20 +39,34 @@ containing the DNS responses takes the following form:
 ```
 event: "dnsResponses"
 measurement_id: ...
-A_data: ...
-A_transmission: "1",
-RRSIG_data: ...
-RRSIG_transmission: "2",
-DNSKEY_data: ...
-DNSKEY_transmission: "1",
-SMIMEA_data: ...
-SMIMEA_transmission: "3",
-HTTPS_data: ...
-HTTPS_transmission: "1",
-NEWONE_data: ...
-NEWONE_transmission: "1",
-NEWTWO_data: ...
-NEWTWO_transmission: "1"
+A_udp_data: ...
+A_tcp_data: ...
+A_udp_transmission: "1",
+A_tcp_transmission: "1",
+RRSIG_udp_data: ...
+RRSIG_tcp_data: ...
+RRSIG_udp_transmission: "2",
+RRSIG_tcp_transmission: "2",
+DNSKEY_udp_data: ...
+DNSKEY_tcp_data: ...
+DNSKEY_udp_transmission: "1",
+DNSKEY_tcp_transmission: "1",
+SMIMEA_udp_data: ...
+SMIMEA_tcp_data: ...
+SMIMEA_udp_transmission: "3",
+SMIMEA_tcp_transmission: "3",
+HTTPS_udp_data: ...
+HTTPS_tcp_data: ...
+HTTPS_udp_transmission: "1",
+HTTPS_tcp_transmission: "1",
+NEWONE_udp_data: ...
+NEWONE_tcp_data: ...
+NEWONE_udp_transmission: "1",
+NEWONE_tcp_transmission: "1",
+NEWTWO_udp_data: ...
+NEWTWO_tcp_data: ...
+NEWTWO_udp_transmission: "1"
+NEWTWO_tcp_transmission: "1"
 ```
 
 - We also send a ping at browser startup that simply indicates the beginning of 
