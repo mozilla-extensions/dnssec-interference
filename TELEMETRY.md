@@ -6,7 +6,7 @@ will be sent for that client.
 
 ## Study-specific endings
 
-This study has no study-specific endings.
+- This study has no study-specific endings.
 
 ## Choice of telemetry API
 
@@ -16,7 +16,7 @@ This study has no study-specific endings.
 ## Custom pings, specific to THIS study.
 
 - This add-on opens UDP and TCP sockets at browser startup and sends DNS requests for a 
-domain name that we control. We request seven different resource record types, 
+names in a zone that we control (\*.dnssec-experiment-moz.net). We request seven different resource record types, 
 re-transmitting if necessary: 
 
   - A
@@ -27,7 +27,7 @@ re-transmitting if necessary:
   - NEWONE (a custom resource record type that we created for this study)
   - NEWTWO (an additional custom resource record type that we created for this study)
 
-We wait for the DNS 
+- We wait for the DNS 
 responses and then encapsulate the raw bytes into a ping, excluding any IP or UDP headers. For each 
 record type, we also record how many transmissions were sent. An example ping
 containing the DNS responses takes the following form:
