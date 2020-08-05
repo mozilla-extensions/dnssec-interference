@@ -11,11 +11,7 @@ This study has no study-specific endings.
 ## Choice of telemetry API
 
 - We will use the [browser.telemetry.submitPing()](https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/collection/webextension-api.html) API to submit custom pings
-  for our study. We will submit the pings to the `TO BE DETERMINED` telemetry bucket.
-
-- We originally considered using the [shield-studies-addon-utils](https://github.com/mozilla/shield-studies-addon-utils) API to submit
-  pings to the `shield-studies-addon-utils` telemetry bucket, but we
-  were discouraged from using it by mythmon.
+  for our study.
 
 ## Custom pings, specific to THIS study.
 
@@ -46,7 +42,7 @@ A_tcp_transmission: "1",
 RRSIG_udp_data: ...
 RRSIG_tcp_data: ...
 RRSIG_udp_transmission: "2",
-RRSIG_tcp_transmission: "2",
+RRSIG_tcp_transmission: "1",
 DNSKEY_udp_data: ...
 DNSKEY_tcp_data: ...
 DNSKEY_udp_transmission: "1",
@@ -54,7 +50,7 @@ DNSKEY_tcp_transmission: "1",
 SMIMEA_udp_data: ...
 SMIMEA_tcp_data: ...
 SMIMEA_udp_transmission: "3",
-SMIMEA_tcp_transmission: "3",
+SMIMEA_tcp_transmission: "1",
 HTTPS_udp_data: ...
 HTTPS_tcp_data: ...
 HTTPS_udp_transmission: "1",
