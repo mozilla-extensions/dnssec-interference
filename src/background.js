@@ -3150,7 +3150,7 @@ const rollout = {
             }]
         });
         query_proto = buf.__proto__;
-        console.log('Query decoded');
+        console.log(rrtype + " query decoded:");
         console.log(DNS_PACKET.decode(buf));
 
         // Keep re-transmitting according to default resolv.conf behavior,
@@ -3177,13 +3177,20 @@ const rollout = {
     },
 
     processDNSResponse(responseBytes, rrtype) {
-        dnsResponses[rrtype]["data"] = responseBytes;
-        console.log(responseBytes, rrtype);
+        // Convert Uint8Array to string to send in telemetry
+        let responseString = String.fromCharCode(...responseBytes);
+        dnsResponses[rrtype]["data"] = responseString;
 
+        // Decode the response bytes for debugging purposes
         Object.setPrototypeOf(responseBytes, query_proto);
         decodedResponse = DNS_PACKET.decode(responseBytes);
-        console.log('Response decoded');
+        console.log(rrtype + " response decoded:");
         console.log(decodedResponse);
+        console.log();
+
+        // Convert the encoded string back to a byte array for debugging purposes
+        // let responseStringToBytes = Uint8Array.from([...responseString].map(ch => ch.charCodeAt(0)));
+        // console.log("Do byte arrays match?: " + arraysMatch(responseBytes, responseStringToBytes));
     }
 }
 
@@ -3193,6 +3200,19 @@ function isUndefined(x) {
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function arraysMatch(a, b) {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (a.length !== b.length) return false;
+
+    for (var i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 async function readNameservers() {
