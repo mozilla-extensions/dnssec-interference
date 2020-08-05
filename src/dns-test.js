@@ -40,119 +40,117 @@ var tcpResponses = {"A":      {"data": "", "transmission": 0},
                     "NEWONE": {"data": "", "transmission": 0},
                     "NEWTWO": {"data": "", "transmission": 0}};
 
-const rollout = {
-    encodeUDPQuery(domain, rrtype) {
-        const buf = DNS_PACKET.encode({
-            type: 'query',
-            // Generate a random transaction ID between 0 and 65535
-            id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED,
-            questions: [{
-                type: rrtype,
-                name: domain
-            }],
-            additionals: [{
-                type: 'OPT',
-                name: '.',
-                udpPayloadSize: 4096
-            }]
-        });
-        udp_query_proto = buf.__proto__;
-        return buf
-    },
+function encodeUDPQuery(domain, rrtype) {
+    const buf = DNS_PACKET.encode({
+        type: 'query',
+        // Generate a random transaction ID between 0 and 65535
+        id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
+        flags: DNS_PACKET.RECURSION_DESIRED,
+        questions: [{
+            type: rrtype,
+            name: domain
+        }],
+        additionals: [{
+            type: 'OPT',
+            name: '.',
+            udpPayloadSize: 4096
+        }]
+    });
+    udp_query_proto = buf.__proto__;
+    return buf
+}
 
-    encodeTCPQuery(domain, rrtype) {
-        const buf = DNS_PACKET.streamEncode({
-            type: 'query',
-            // Generate a random transaction ID between 0 and 65535
-            id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED,
-            questions: [{
-                type: rrtype,
-                name: domain
-            }]
-        });
-        tcp_query_proto = buf.__proto__;
-        return buf;
-    },
-    
-    async sendUDPQuery(domain, nameservers, rrtype) {
-        // Keep re-transmitting according to default resolv.conf behavior,
-        // checking if we have a DNS response for the RR type yet
-        try{ 
-            let buf = rollout.encodeUDPQuery(domain, rrtype);
-            let written = 0;
-            for (let i = 0; i < nameservers.length; i++) {
-                for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
-                    let nameserver = nameservers[i];
-                    let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
-                    udpResponses[rrtype]["transmission"] += 1
-                    if (written <= 0) {
-                        // sendTelemetry({"event": "noBytesWritenError", 
-                        //                "rrtype": rrtype, 
-                        //                "usedUDP": "true",
-                        //                "transmission": udpResponses[rrtype]["transmission"]});
-                    }
-                    await sleep(RESOLVCONF_TIMEOUT);
+function encodeTCPQuery(domain, rrtype) {
+    const buf = DNS_PACKET.streamEncode({
+        type: 'query',
+        // Generate a random transaction ID between 0 and 65535
+        id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
+        flags: DNS_PACKET.RECURSION_DESIRED,
+        questions: [{
+            type: rrtype,
+            name: domain
+        }]
+    });
+    tcp_query_proto = buf.__proto__;
+    return buf;
+}
 
-                    if (isUndefined(udpResponses[rrtype]["data"]) || udpResponses[rrtype]["data"] === "") {
-                        console.log("Need to re-transmit UDP query");
-                    } else {
-                        return
-                    }
-                }
-            }
-        } catch(e) {
-            // sendTelemetry({"event": "sendQueryError",
-            //                "rrtype": rrtype,
-            //                "usedUDP": "true"});
-        }
-    },
-
-    async sendTCPQuery(domain, nameservers, rrtype) {
-        try {
-            let buf = rollout.encodeTCPQuery(domain, rrtype);
-            for (let i = 0; i < nameservers.length; i++) {
+async function sendUDPQuery(domain, nameservers, rrtype) {
+    // Keep re-transmitting according to default resolv.conf behavior,
+    // checking if we have a DNS response for the RR type yet
+    try{ 
+        let buf = encodeUDPQuery(domain, rrtype);
+        let written = 0;
+        for (let i = 0; i < nameservers.length; i++) {
+            for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
                 let nameserver = nameservers[i];
-                let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
-                tcpResponses[rrtype]["transmission"] += 1;
-                let responseString = String.fromCharCode(...responseBytes);
+                let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
+                udpResponses[rrtype]["transmission"] += 1
+                if (written <= 0) {
+                    // sendTelemetry({"event": "noBytesWritenError", 
+                    //                "rrtype": rrtype, 
+                    //                "usedUDP": "true",
+                    //                "transmission": udpResponses[rrtype]["transmission"]});
+                }
+                await sleep(RESOLVCONF_TIMEOUT);
 
-                if (responseString == "") {
-                    console.log("Need to re-transmit TCP query");
+                if (isUndefined(udpResponses[rrtype]["data"]) || udpResponses[rrtype]["data"] === "") {
+                    console.log("Need to re-transmit UDP query");
                 } else {
-                    tcpResponses[rrtype]["data"] = responseString;
-
-                    // Decode for debugging purposes
-                    Object.setPrototypeOf(responseBytes, tcp_query_proto);
-                    decodedResponse = DNS_PACKET.streamDecode(responseBytes);
-                    console.log(rrtype + ": TCP Response decoded");
-                    console.log(decodedResponse);
-                    console.log()
                     return
                 }
             }
-        } catch(e) {
-            // sendTelemetry({"event": "sendQueryError",
-            //                "rrtype": rrtype,
-            //                "usedUDP": "false"});
         }
-    },
-
-    processUDPResponse(responseBytes, rrtype) {
-        let responseString = String.fromCharCode(...responseBytes);
-        udpResponses[rrtype]["data"] = responseString;
-
-        Object.setPrototypeOf(responseBytes, udp_query_proto);
-        decodedResponse = DNS_PACKET.decode(responseBytes);
-        console.log(rrtype + ": UDP Response decoded");
-        console.log(decodedResponse);
-
-        // For debugging purposes:
-        // Convert the encoded string back to a byte array for debugging purposes
-        // let responseStringToBytes = Uint8Array.from([...responseString].map(ch => ch.charCodeAt(0)));
-        // console.log("Do byte arrays match?: " + arraysMatch(responseBytes, responseStringToBytes));
+    } catch(e) {
+        // sendTelemetry({"event": "sendQueryError",
+        //                "rrtype": rrtype,
+        //                "usedUDP": "true"});
     }
+}
+
+async function sendTCPQuery(domain, nameservers, rrtype) {
+    try {
+        let buf = encodeTCPQuery(domain, rrtype);
+        for (let i = 0; i < nameservers.length; i++) {
+            let nameserver = nameservers[i];
+            let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
+            tcpResponses[rrtype]["transmission"] += 1;
+            let responseString = String.fromCharCode(...responseBytes);
+
+            if (responseString == "") {
+                console.log("Need to re-transmit TCP query");
+            } else {
+                tcpResponses[rrtype]["data"] = responseString;
+
+                // Decode for debugging purposes
+                Object.setPrototypeOf(responseBytes, tcp_query_proto);
+                decodedResponse = DNS_PACKET.streamDecode(responseBytes);
+                console.log(rrtype + ": TCP Response decoded");
+                console.log(decodedResponse);
+                console.log()
+                return
+            }
+        }
+    } catch(e) {
+        // sendTelemetry({"event": "sendQueryError",
+        //                "rrtype": rrtype,
+        //                "usedUDP": "false"});
+    }
+}
+
+function processUDPResponse(responseBytes, rrtype) {
+    let responseString = String.fromCharCode(...responseBytes);
+    udpResponses[rrtype]["data"] = responseString;
+
+    Object.setPrototypeOf(responseBytes, udp_query_proto);
+    decodedResponse = DNS_PACKET.decode(responseBytes);
+    console.log(rrtype + ": UDP Response decoded");
+    console.log(decodedResponse);
+
+    // For debugging purposes:
+    // Convert the encoded string back to a byte array for debugging purposes
+    // let responseStringToBytes = Uint8Array.from([...responseString].map(ch => ch.charCodeAt(0)));
+    // console.log("Do byte arrays match?: " + arraysMatch(responseBytes, responseStringToBytes));
 }
 
 function isUndefined(x) {
@@ -217,7 +215,7 @@ async function readNameservers() {
 async function setupUDPCode() {
     try {
         await browser.experiments.udpsocket.openSocket();
-        browser.experiments.udpsocket.onDNSResponseReceived.addListener(rollout.processUDPResponse);
+        browser.experiments.udpsocket.onDNSResponseReceived.addListener(processUDPResponse);
     } catch(e) {
         // sendTelemetry({"event": "openUDPSocketsError"});
         throw new Error("Couldn't set up UDP socket or event listener");
@@ -228,14 +226,14 @@ async function sendQueries(nameservers_ipv4) {
     for (let i = 0; i < RRTYPES.length; i++) {
         let rrtype = RRTYPES[i];
         if (rrtype == 'SMIMEA') {
-            await rollout.sendUDPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
-            await rollout.sendTCPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendUDPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendTCPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
         } else if (rrtype == 'HTTPS') {
-            await rollout.sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype);
-            await rollout.sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype);
         } else {
-            await rollout.sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype);
-            await rollout.sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype);
         }
     }
 
@@ -263,7 +261,7 @@ function sendTelemetry(payload) {
 }
 
 function cleanup() {
-    browser.experiments.udpsocket.onDNSResponseReceived.removeListener(rollout.processUDPResponse);
+    browser.experiments.udpsocket.onDNSResponseReceived.removeListener(processUDPResponse);
 }
 
 async function runMeasurement() {
