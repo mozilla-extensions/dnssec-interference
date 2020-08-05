@@ -2,14 +2,14 @@
 /* exported tcpsocket */
 /* global Components, ExtensionAPI, ExtensionCommon, Services */
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const Cu = Components.utils;
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+// const Cc = Components.classes;
+// const Ci = Components.interfaces;
+// const Cu = Components.utils;
+// const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { TCPSocket } = Cu.getGlobalForObject(
     ChromeUtils.import("resource://gre/modules/Services.jsm")
 );
-const { EventManager} = ExtensionCommon;
+// const { EventManager } = ExtensionCommon;
 
 /**
  * Helper method to add event listeners to a socket and provide two Promise-returning
