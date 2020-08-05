@@ -1,0 +1,26 @@
+[
+  {
+    "namespace": "experiments.tcpsocket",
+    "description": "TCP Client Socket implementation",
+    "functions": [
+      {
+        "name": "sendDNSQuery",
+        "type": "function",
+        "description": "This method sends a DNS query over TCP and waits for a response",
+        "parameters": [
+            {
+                "type": "string",
+                "name": "addr",
+                "description": "Address to send the DNS request to"
+            },
+            {
+                "type": "any",
+                "name": "buf",
+                "description": "DNS packet to be sent"
+            }
+        ],
+        "async": true
+      }
+    ]
+  }
+]
