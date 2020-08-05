@@ -15,7 +15,7 @@ will be sent for that client.
 
 ## Custom pings, specific to THIS study.
 
-- This add-on opens UDP and TCP sockets at browser startup and sends DNS requests for a 
+- This add-on opens UDP and TCP sockets at browser startup and sends DNS requests for 
 names in a zone that we control (\*.dnssec-experiment-moz.net). We request seven different resource record types, 
 re-transmitting if necessary: 
 
@@ -87,8 +87,7 @@ measurement_id: ...
 
 - In all of the pings, `measurement_id` is a UUID that is added to represent a
   particular instance of our measurements for a given client. In essence, it is 
-  a session ID, since our measurements should only run once at browser startup,
-  barring some code error.
+  a session ID, since our measurements should only run once at browser startup.
 
 # Performance optimizations affecting submitted telemetry
 
@@ -96,5 +95,5 @@ measurement_id: ...
 the DNS responses to return, re-transmitting lost packets if necessary. We then 
 encapsulate the DNS responses into a single ping.
 - If we receive the correct responses for each DNS request, then the size of the
-data for the ping containing the responses should be at most 3 KB.
+ping containing the responses should be at most 4-5 KB.
 - As previously noted, we only run the measurements once per browser startup.
