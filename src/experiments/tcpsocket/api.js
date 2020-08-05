@@ -11,9 +11,6 @@ const { TCPSocket } = Cu.getGlobalForObject(
 );
 const { EventManager} = ExtensionCommon;
 
-var tcp_socket;
-var tcp_event_queue;
-
 /**
  * Helper method to add event listeners to a socket and provide two Promise-returning
  * helpers (see below for docs on them).  This *must* be called during the turn of
@@ -60,14 +57,12 @@ function listenForEventsOnSocket(socket, socketType) {
         event.data.byteLength +
         ")\n"
     );
-    // ok(
-    //   socketCompartmentInstanceOfArrayBuffer(event.data),
-    //   "payload is ArrayBuffer"
-    // );
+    
     var arr = new Uint8Array(event.data);
     if (receivedData === null) {
       receivedData = arr;
     } else {
+      console.log(receivedData);
       receivedData = concatUint8Arrays(receivedData, arr);
     }
     if (wantDataLength !== null && receivedData.length >= wantDataLength) {
@@ -136,22 +131,15 @@ function listenForEventsOnSocket(socket, socketType) {
   };
 }
 
-
 var tcpsocket = class tcpsocket extends ExtensionAPI {
   getAPI(context) {
     const {extension} = context;
     return {
       experiments: {
         tcpsocket: {
-          async test(buf) {
-            // Instantiate socket/event queue
-            console.log(buf);
-            console.log(buf.buffer);
-            console.log(buf.byteOffset);
-            console.log(buf.byteLength);
-            // tcp_socket = new TCPSocket("93.184.216.34", 80, { binaryType: "arraybuffer" });
-            tcp_socket = new TCPSocket("10.8.0.6", 53, { binaryType: "arraybuffer" });
-            tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
+          async sendDNSQuery(addr, buf) {
+            let tcp_socket = new TCPSocket(addr, 53, { binaryType: "arraybuffer" });
+            let tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
            
             // Wait until the socket has opened a connection to the DNS server
             let nextEvent = (await tcp_event_queue.waitForEvent()).type;
@@ -161,14 +149,8 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                 throw new Error("Could not open TCP socket");
             }
 
-            console.log("Before send");
             tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
-            console.log("After send");
-            let answer = await tcp_event_queue.waitForDataWithAtLeastLength(1);
-            console.log(answer);
-            console.log("After answer");
-            tcp_socket.close();
-            console.log("Closed socket on my own");
+            let answer = await tcp_event_queue.waitForDataWithAtLeastLength(buf.byteLength);
             return answer;
           }
         },

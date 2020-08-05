@@ -4,10 +4,15 @@
     "description": "TCP Client Socket implementation",
     "functions": [
       {
-        "name": "test",
+        "name": "sendDNSQuery",
         "type": "function",
-        "description": "This method tests out the use of a TCP socket to send/receive DNS packets",
+        "description": "This method sends a DNS query over TCP and waits for a response",
         "parameters": [
+            {
+                "type": "string",
+                "name": "addr",
+                "description": "Address to send the DNS request to"
+            },
             {
                 "type": "any",
                 "name": "buf",

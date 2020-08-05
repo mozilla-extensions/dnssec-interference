@@ -184,13 +184,8 @@ async function runMeasurement() {
             type: "A",
             name: "google.com"
         }]
-        // additionals: [{
-        //     type: 'OPT',
-        //     name: '.',
-        //     udpPayloadSize: 4096
-        // }]
     });
-    let dnsResponse = await browser.experiments.tcpsocket.test(buf);
+    let dnsResponse = await browser.experiments.tcpsocket.sendDNSQuery("10.8.0.5", buf);
     query_proto = buf.__proto__;
     Object.setPrototypeOf(dnsResponse, query_proto);
     console.log(DNS_PACKET.streamDecode(dnsResponse));
