@@ -145,7 +145,12 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
         tcpsocket: {
           async test(buf) {
             // Instantiate socket/event queue
-            tcp_socket = new TCPSocket("8.8.8.8", 53, { binaryType: "arraybuffer" });
+            console.log(buf);
+            console.log(buf.buffer);
+            console.log(buf.byteOffset);
+            console.log(buf.byteLength);
+            // tcp_socket = new TCPSocket("93.184.216.34", 80, { binaryType: "arraybuffer" });
+            tcp_socket = new TCPSocket("10.8.0.6", 53, { binaryType: "arraybuffer" });
             tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
            
             // Wait until the socket has opened a connection to the DNS server
@@ -156,13 +161,15 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                 throw new Error("Could not open TCP socket");
             }
 
-            console.log(tcp_socket.readyState);
-
-            // console.log("Before send");
-            // tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
-            // console.log("After send");
-            // let answer = await tcp_event_queue.waitForDataWithAtLeastLength(5);
-            // console.log("After answer");
+            console.log("Before send");
+            tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
+            console.log("After send");
+            let answer = await tcp_event_queue.waitForDataWithAtLeastLength(1);
+            console.log(answer);
+            console.log("After answer");
+            tcp_socket.close();
+            console.log("Closed socket on my own");
+            return answer;
           }
         },
       },

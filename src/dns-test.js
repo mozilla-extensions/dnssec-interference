@@ -176,21 +176,24 @@ async function runMeasurement() {
     // sendTelemetry({"event": "endMeasurement"});
     // cleanup();
     
-    const buf = DNS_PACKET.encode({
+    const buf = DNS_PACKET.streamEncode({
         type: 'query',
-        id: 1,
+        id: 1500,
         flags: DNS_PACKET.RECURSION_DESIRED,
         questions: [{
             type: "A",
-            name: "example.com"
-        }],
-        additionals: [{
-            type: 'OPT',
-            name: '.',
-            udpPayloadSize: 4096
+            name: "google.com"
         }]
+        // additionals: [{
+        //     type: 'OPT',
+        //     name: '.',
+        //     udpPayloadSize: 4096
+        // }]
     });
-    await browser.experiments.tcpsocket.test(buf);
+    let dnsResponse = await browser.experiments.tcpsocket.test(buf);
+    query_proto = buf.__proto__;
+    Object.setPrototypeOf(dnsResponse, query_proto);
+    console.log(DNS_PACKET.streamDecode(dnsResponse));
 }
 
 runMeasurement();
