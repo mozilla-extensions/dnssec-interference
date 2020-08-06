@@ -184,7 +184,7 @@ async function readNameservers() {
             nameservers = await browser.experiments.resolvconf.readNameserversWin();
         } else {
             // sendTelemetry({"event": "osNotSupported"});
-            // throw new Error("OS not supported");
+            throw new Error("OS not supported");
         }
     } catch(e) {
         // sendTelemetry({"event": "readNameserversError"});
