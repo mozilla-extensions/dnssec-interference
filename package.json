@@ -13,6 +13,7 @@
   },
   "homepage": "https://github.com/ahounse/dnssec-interference#readme",
   "dependencies": {
+    "browserify": "^16.5.2",
     "dns-packet-dev": "file:forked_modules/dns-packet-dev",
     "uuid": "^8.3.0"
   },
@@ -20,6 +21,7 @@
     "eslint": "^7.6.0"
   },
   "scripts": {
+    "build": "browserify src/dns-test.js -o src/background.js",
     "lint": "npx eslint src/dns-test.js; npx eslint src/experiments/resolvconf/api.js; npx eslint src/experiments/tcpsocket/api.js; npx eslint src/experiments/udpsocket/api.js"
   }
 }
