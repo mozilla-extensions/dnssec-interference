@@ -39,6 +39,9 @@ var tcpResponses = {"A":      {"data": "", "transmission": 0},
                     "NEWONE": {"data": "", "transmission": 0},
                     "NEWTWO": {"data": "", "transmission": 0}};
 
+/**
+ * Encode a DNS query to be sent over a UDP socket
+ */
 function encodeUDPQuery(domain, rrtype) {
     const buf = DNS_PACKET.encode({
         type: 'query',
@@ -59,6 +62,9 @@ function encodeUDPQuery(domain, rrtype) {
     return buf
 }
 
+/**
+ * Encode a DNS query to be sent over a TCP socket
+ */
 function encodeTCPQuery(domain, rrtype) {
     const buf = DNS_PACKET.streamEncode({
         type: 'query',
@@ -74,9 +80,15 @@ function encodeTCPQuery(domain, rrtype) {
     return buf;
 }
 
+/**
+ * Send a DNS query over UDP, re-transmitting according to default 
+ * resolvconf behavior if we fail to receive a response.
+ *
+ * In short, we re-transmit at most RESOLVCONF_ATTEMPTS for each nameserver 
+ * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT 
+ * (5000 ms).
+ */
 async function sendUDPQuery(domain, nameservers, rrtype) {
-    // Kep re-transmitting according to default resolv.conf behavior,
-    // checking if we have a DNS response for the RR type yet
     let buf = encodeUDPQuery(domain, rrtype);
     for (let i = 0; i < nameservers.length; i++) {
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
@@ -99,6 +111,10 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
     }
 }
 
+/**
+ * Send a DNS query over TCP, re-transmitting to another nameserver if we 
+ * fail to receive a response. We let TCP handle re-transmissions.
+ */
 async function sendTCPQuery(domain, nameservers, rrtype) {
     let buf = encodeTCPQuery(domain, rrtype);
     for (let i = 0; i < nameservers.length; i++) {
@@ -123,6 +139,9 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
     }
 }
 
+/**
+ * Event listener that responds to packets that we receive from our UDP sockets
+ */
 function processUDPResponse(responseBytes, rrtype) {
     let responseString = String.fromCharCode(...responseBytes);
     udpResponses[rrtype]["data"] = responseString;
@@ -134,14 +153,25 @@ function processUDPResponse(responseBytes, rrtype) {
     console.log(decodedResponse);
 }
 
+/**
+ * Check if an object is undefined or null
+ */
 function isUndefined(x) {
     return (typeof(x) === 'undefined' || x === null);
 }
 
+/**
+ * Sleep implementation
+ */
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Read the client's nameservers from disk.
+ * If on macOS, read /etc/resolv.comf.
+ * If on Windows, read a registry.
+ */
 async function readNameservers() {
     let nameservers = [];
     try { 
@@ -179,6 +209,10 @@ async function readNameservers() {
     return nameservers_ipv4;
 }
 
+/**
+ * Open the UDP sockets and add an event listener for when we receive UDP 
+ * responses.
+ */
 async function setupUDPCode() {
     try {
         await browser.experiments.udpsocket.openSocket();
@@ -189,6 +223,10 @@ async function setupUDPCode() {
     }
 }
 
+/**
+ * For each RR type that we have a DNS record for, attempt to send queries over 
+ * UDP and TCP.
+ */
 async function sendQueries(nameservers_ipv4) {
     for (let i = 0; i < RRTYPES.length; i++) {
         let rrtype = RRTYPES[i];
@@ -204,6 +242,7 @@ async function sendQueries(nameservers_ipv4) {
         }
     }
 
+    // Add the DNS responses as strings to an object, and send the object to telemetry
     let payload = {"event": "dnsResponses"};
     for (let i = 0; i < RRTYPES.length; i++) {
         let rrtype = RRTYPES[i];
@@ -215,6 +254,10 @@ async function sendQueries(nameservers_ipv4) {
     sendTelemetry(payload);
 }
 
+/**
+ * Add an ID to telemetry that corresponds with this instance of our 
+ * measurement, i.e. a browser session
+ */
 function sendTelemetry(payload) {
     try {
         payload["measurement_id"] = measurement_id;
@@ -224,10 +267,17 @@ function sendTelemetry(payload) {
     }
 }
 
+/**
+ * Close UDP sockets once we're done with the measurement. The single TCP 
+ * socket we use is opened/closed for each query/response.
+ */
 function cleanup() {
     browser.experiments.udpsocket.onDNSResponseReceived.removeListener(processUDPResponse);
 }
 
+/**
+ * Entry point for our measurements.
+ */
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
     measurement_id = uuidv4();

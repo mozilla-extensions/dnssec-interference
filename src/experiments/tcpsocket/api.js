@@ -6,6 +6,9 @@ const { TCPSocket } = Cu.getGlobalForObject(
     ChromeUtils.import("resource://gre/modules/Services.jsm")
 );
 
+/**
+ * Concatenate two Uint8Array objects
+ */
 function concatUint8Arrays(a, b) {
     let newArr = new Uint8Array(a.length + b.length);
     newArr.set(a, 0);
@@ -138,6 +141,10 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
         return {
             experiments: {
                 tcpsocket: {
+                    /** 
+                     * Send a DNS query stored in buf over a TCP socket to a 
+                     * nameserver addressed by addr
+                     */
                     async sendDNSQuery(addr, buf) {
                         let tcp_socket = new TCPSocket(addr, 53, { binaryType: "arraybuffer" });
                         let tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");

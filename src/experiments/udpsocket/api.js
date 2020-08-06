@@ -28,6 +28,10 @@ var udpsocket = class udpsocket extends ExtensionAPI {
     return {
       experiments: {
         udpsocket: {
+          /**
+           * Open one UDP socket per RR type so that we can keep track of which 
+           * DNS responses we failed to receive
+           */
           openSocket() {
             for (const rrtype in sockets_ipv4) {
               let socket = sockets_ipv4[rrtype];
@@ -35,7 +39,11 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               console.log(rrtype + " socket initialized on " + socket.localAddr.address + ":" + socket.port);
             }
           },
-
+            
+          /**
+           * Event listener that responds to packets being received on our UDP 
+           * sockets. We send the raw bytes for the UDP data to background.js
+           */
           onDNSResponseReceived: new EventManager({
               context,
               name: "experiments.udpsocket.onDNSResponseReceived",
@@ -64,6 +72,10 @@ var udpsocket = class udpsocket extends ExtensionAPI {
               }
           }).api(),
 
+          /**
+           * Send a DNS query stored in buf to a nameserver addresses by addr 
+           * over the corresponding UDP socket for the query's RR type
+           */
           sendDNSQuery(addr, buf, rrtype) {
             let written;
             let socket = sockets_ipv4[rrtype];

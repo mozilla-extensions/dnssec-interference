@@ -13,6 +13,10 @@ var resolvconf = class resolvconf extends ExtensionAPI {
         return {
             experiments: {
                 resolvconf: {
+                    /**
+                     * If a client is on macOS, read nameservers from 
+                     * /etc/resolv.conf
+                     */
                     async readNameserversMac() {
                         let nameservers = [];
                         let resolvconf_string = await OS.File.read(MAC_RESOLVCONF_PATH, { "encoding": "utf-8" });
@@ -27,6 +31,10 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         return nameservers;
                     },
 
+                    /**
+                     * If a client is on Windows, read nameservers from 
+                     * a registry
+                     */
                     async readNameserversWin() {
                         let nameservers = [];
                         let rootKey = 0x80000002;
