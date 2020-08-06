@@ -16,6 +16,10 @@
     "dns-packet-dev": "file:forked_modules/dns-packet-dev",
     "uuid": "^8.3.0"
   },
-  "devDependencies": {},
-  "scripts": {}
+  "devDependencies": {
+    "eslint": "^7.6.0"
+  },
+  "scripts": {
+    "lint": "npx eslint src/dns-test.js; npx eslint src/experiments/resolvconf/api.js; npx eslint src/experiments/tcpsocket/api.js; npx eslint src/experiments/udpsocket/api.js"
+  }
 }
