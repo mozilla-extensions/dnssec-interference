@@ -1,15 +1,13 @@
 "use strict";
 /* exported udpsocket */
-/* global Components, ExtensionAPI, ExtensionCommon, Services */
+/* global Components, ChromeUtils, ExtensionCommon, ExtensionAPI */
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
-const Cu = Components.utils;
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { EventManager} = ExtensionCommon;
 
 const socket_ipv4_a         = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
-const socket_ipv4_aaaa      = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_rrsig     = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_dnskey    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_smimea    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
@@ -27,7 +25,6 @@ const sockets_ipv4 = {"A":      socket_ipv4_a,
 
 var udpsocket = class udpsocket extends ExtensionAPI {
   getAPI(context) {
-    const {extension} = context;
     return {
       experiments: {
         udpsocket: {

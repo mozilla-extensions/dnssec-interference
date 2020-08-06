@@ -1,10 +1,17 @@
 "use strict";
 /* exported tcpsocket */
-/* global Cc, Ci, Cu, Components, EventManager, ExtensionAPI, ExtensionCommon, Services */
+/* global ExtensionAPI, ChromeUtils, Cu */
 
 const { TCPSocket } = Cu.getGlobalForObject(
     ChromeUtils.import("resource://gre/modules/Services.jsm")
 );
+
+function concatUint8Arrays(a, b) {
+    let newArr = new Uint8Array(a.length + b.length);
+    newArr.set(a, 0);
+    newArr.set(b, a.length);
+    return newArr;
+}
 
 /**
  * Helper method to add event listeners to a socket and provide two Promise-returning
@@ -128,7 +135,6 @@ function listenForEventsOnSocket(socket, socketType) {
 
 var tcpsocket = class tcpsocket extends ExtensionAPI {
     getAPI(context) {
-        const {extension} = context;
         return {
             experiments: {
                 tcpsocket: {
