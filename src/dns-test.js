@@ -8,7 +8,7 @@ const HTTPS_DOMAIN_NAME = "_443._tcp.dnssec-experiment-moz.net";
 
 const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
-const RESOLVCONF_ATTEMPTS = 2;
+const RESOLVCONF_ATTEMPTS = 2; // Number of attempts per nameserver
 
 const TELEMETRY_TYPE = "dnssec-interference-report";
 const TELEMETRY_OPTIONS = {
