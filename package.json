@@ -16,5 +16,6 @@
     "dns-packet-dev": "file:forked_modules/dns-packet-dev",
     "uuid": "^8.3.0"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "scripts": {}
 }
