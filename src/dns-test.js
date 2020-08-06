@@ -78,63 +78,49 @@ function encodeTCPQuery(domain, rrtype) {
 async function sendUDPQuery(domain, nameservers, rrtype) {
     // Keep re-transmitting according to default resolv.conf behavior,
     // checking if we have a DNS response for the RR type yet
-    try{ 
-        let buf = encodeUDPQuery(domain, rrtype);
-        let written = 0;
-        for (let i = 0; i < nameservers.length; i++) {
-            for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
+    let buf = encodeUDPQuery(domain, rrtype);
+    for (let i = 0; i < nameservers.length; i++) {
+        for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
+            try {
                 let nameserver = nameservers[i];
-                let written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
                 udpResponses[rrtype]["transmission"] += 1
-                if (written <= 0) {
-                    // sendTelemetry({"event": "noBytesWritenError", 
-                    //                "rrtype": rrtype, 
-                    //                "usedUDP": "true",
-                    //                "transmission": udpResponses[rrtype]["transmission"]});
-                }
-                await sleep(RESOLVCONF_TIMEOUT);
+                await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
+            } catch(e) {
+                console.log("Failure while sending UDP query");
+                continue
+            }
+            await sleep(RESOLVCONF_TIMEOUT);
 
-                if (isUndefined(udpResponses[rrtype]["data"]) || udpResponses[rrtype]["data"] === "") {
-                    console.log("Need to re-transmit UDP query");
-                } else {
-                    return
-                }
+            if (isUndefined(udpResponses[rrtype]["data"]) || udpResponses[rrtype]["data"] === "") {
+                console.log("No response received for UDP query");
+            } else {
+                return
             }
         }
-    } catch(e) {
-        // sendTelemetry({"event": "sendQueryError",
-        //                "rrtype": rrtype,
-        //                "usedUDP": "true"});
     }
 }
 
 async function sendTCPQuery(domain, nameservers, rrtype) {
-    try {
-        let buf = encodeTCPQuery(domain, rrtype);
-        for (let i = 0; i < nameservers.length; i++) {
+    let buf = encodeTCPQuery(domain, rrtype);
+    for (let i = 0; i < nameservers.length; i++) {
+        try {
             let nameserver = nameservers[i];
-            let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
             tcpResponses[rrtype]["transmission"] += 1;
+            let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
             let responseString = String.fromCharCode(...responseBytes);
+            tcpResponses[rrtype]["data"] = responseString;
 
-            if (responseString == "") {
-                console.log("Need to re-transmit TCP query");
-            } else {
-                tcpResponses[rrtype]["data"] = responseString;
-
-                // Decode for debugging purposes
-                Object.setPrototypeOf(responseBytes, tcp_query_proto);
-                decodedResponse = DNS_PACKET.streamDecode(responseBytes);
-                console.log(rrtype + ": TCP Response decoded");
-                console.log(decodedResponse);
-                console.log()
-                return
-            }
+            // For debugging purposes
+            Object.setPrototypeOf(responseBytes, tcp_query_proto);
+            decodedResponse = DNS_PACKET.streamDecode(responseBytes);
+            console.log(rrtype + ": TCP Response decoded");
+            console.log(decodedResponse);
+            return
+        } catch (e) {
+            console.log("Failure while sending TCP query, or no response received");
+            continue
         }
-    } catch(e) {
-        // sendTelemetry({"event": "sendQueryError",
-        //                "rrtype": rrtype,
-        //                "usedUDP": "false"});
+
     }
 }
 
@@ -184,16 +170,19 @@ async function readNameservers() {
             nameservers = await browser.experiments.resolvconf.readNameserversWin();
         } else {
             // sendTelemetry({"event": "osNotSupported"});
+            console.log("osNotSupported");
             throw new Error("OS not supported");
         }
     } catch(e) {
+        console.log("readNameserversError");
         // sendTelemetry({"event": "readNameserversError"});
-        throw e;
+        throw new Error("Couldn't read /etc/resolv.conf or registry");
     } 
 
     if (!Array.isArray(nameservers) || nameservers.length <= 0) {
+        console.log("noNameserversError");
         // sendTelemetry({"event": "noNameserversError"});
-        throw new Error("No nameservers found");
+        throw new Error("No nameservers found in /etc/resolv.conf or registry");
     }
 
     let nameservers_ipv4 = [];
@@ -205,6 +194,7 @@ async function readNameservers() {
     }
 
     if (nameservers_ipv4.length <= 0) {
+        console.log("noIPv4NameserversError");
         // sendTelemetry({"event": noIPv4NameserversError"});
         throw new Error("No IPv4 nameservers found");
     }
@@ -217,6 +207,7 @@ async function setupUDPCode() {
         await browser.experiments.udpsocket.openSocket();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(processUDPResponse);
     } catch(e) {
+        console.log("openUDPSocketsError");
         // sendTelemetry({"event": "openUDPSocketsError"});
         throw new Error("Couldn't set up UDP socket or event listener");
     }
@@ -247,6 +238,7 @@ async function sendQueries(nameservers_ipv4) {
         payload[rrtype + "_tcp_data"] = tcpResponses[rrtype]["data"];
         payload[rrtype + "_tcp_transmission"] = tcpResponses[rrtype]["transmission"].toString();
     }
+    console.log("DNS payload to be sent:");
     console.log(payload);
     // sendTelemetry(payload);
 }
@@ -267,6 +259,7 @@ function cleanup() {
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
     measurement_id = uuidv4();
+    console.log("startMeasurement");
     // sendTelemetry({"event": "startMeasurement"});
 
     let nameservers_ipv4 = await readNameservers();
@@ -274,6 +267,7 @@ async function runMeasurement() {
     await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the start of the measurement
+    console.log("endMeasurement");
     // sendTelemetry({"event": "endMeasurement"});
     cleanup();
 }
