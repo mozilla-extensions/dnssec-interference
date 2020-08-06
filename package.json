@@ -4,14 +4,14 @@
   "description": "DNSSEC Interference Study",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ahounsel/dnssec-interference.git"
+    "url": "git+https://github.com/mozilla-extensions/dnssec-interference.git"
   },
   "author": "Austin Hounsel",
   "license": "MPL-2.0",
   "bugs": {
-    "url": "https://github.com/ahounsel/dnssec-interference/issues"
+    "url": "https://github.com/mozilla-extensions/dnssec-interference/issues"
   },
-  "homepage": "https://github.com/ahounse/dnssec-interference#readme",
+  "homepage": "https://github.com/mozilla-extensions/dnssec-interference/README.md",
   "dependencies": {
     "browserify": "^16.5.2",
     "dns-packet-dev": "file:forked_modules/dns-packet-dev",
