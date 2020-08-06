@@ -1,58 +1,58 @@
 {
-  "manifest_version": 2,
-  "name": "DNSSEC Interference Study",
-  "description": "Mozilla addon that measures DNSSEC interference by middleboxes",
-  "version": "0.0.1",
-  "hidden": true,
+    "manifest_version": 2,
+    "name": "DNSSEC Interference Study",
+    "description": "Mozilla addon that measures DNSSEC interference by middleboxes",
+    "version": "0.0.1",
+    "hidden": true,
 
-  "applications": {
-    "gecko": {
-      "id": "dnssec-study@mozilla.org"
+    "applications": {
+        "gecko": {
+            "id": "dnssec-study@mozilla.org"
+        }
+    },
+
+    "permissions": [
+        "telemetry"
+    ],
+
+    "browser_action": {},
+
+    "background": {
+        "scripts": ["background.js"]
+    },
+
+    "experiment_apis": {
+        "udpsocket": {
+            "schema": "experiments/udpsocket/schema.json",
+            "parent": {
+                "scopes": ["addon_parent"],
+                "paths": [["experiments", "udpsocket"]],
+                "script": "experiments/udpsocket/api.js"
+            }
+        },
+        "tcpsocket": {
+            "schema": "experiments/tcpsocket/schema.json",
+            "parent": {
+                "scopes": ["addon_parent"],
+                "paths": [["experiments", "tcpsocket"]],
+                "script": "experiments/tcpsocket/api.js"
+            }
+        },
+        "resolvconf": {
+            "schema": "experiments/resolvconf/schema.json",
+            "parent": {
+                "scopes": ["addon_parent"],
+                "paths": [["experiments", "resolvconf"]],
+                "script": "experiments/resolvconf/api.js"
+            }
+        },
+        "study": {
+            "schema": "privileged/study/schema.json",
+            "parent": {
+                "scopes": ["addon_parent"],
+                "script": "privileged/study/api.js",
+                "paths": [["study"]]
+            }
+        }
     }
-  },
-
-  "permissions": [
-    "telemetry"
-  ],
-
-  "browser_action": {},
-
-  "background": {
-    "scripts": ["background.js"]
-  },
-
-  "experiment_apis": {
-    "udpsocket": {
-      "schema": "experiments/udpsocket/schema.json",
-      "parent": {
-        "scopes": ["addon_parent"],
-        "paths": [["experiments", "udpsocket"]],
-	    "script": "experiments/udpsocket/api.js"
-      }
-    },
-    "tcpsocket": {
-      "schema": "experiments/tcpsocket/schema.json",
-      "parent": {
-        "scopes": ["addon_parent"],
-        "paths": [["experiments", "tcpsocket"]],
-	    "script": "experiments/tcpsocket/api.js"
-      }
-    },
-    "resolvconf": {
-      "schema": "experiments/resolvconf/schema.json",
-      "parent": {
-	    "scopes": ["addon_parent"],
-        "paths": [["experiments", "resolvconf"]],
-        "script": "experiments/resolvconf/api.js"
-      }
-    },
-    "study": {
-      "schema": "privileged/study/schema.json",
-      "parent": {
-        "scopes": ["addon_parent"],
-        "script": "privileged/study/api.js",
-        "paths": [["study"]]
-      }
-    }
-  }
 }
