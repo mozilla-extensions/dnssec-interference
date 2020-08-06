@@ -4,30 +4,10 @@
   "description": "An abstract-encoding compliant module for encoding / decoding DNS packets",
   "author": "Mathias Buus / Austin Hounsel",
   "license": "MIT",
-  "repository": "ahousnel/dnssec-interference",
-  "homepage": "https://github.com/ahounsel/dnssec-interference",
-  "engines": {
-    "node": ">=6"
-  },
-  "scripts": {
-    "clean": "rm -rf coverage .nyc_output/",
-    "lint": "eslint --color *.js examples/*.js",
-    "pretest": "npm run lint",
-    "test": "tape test.js",
-    "coverage": "nyc -r html npm test"
-  },
+  "repository": "mozilla-extensions/dnssec-interference",
+  "homepage": "https://github.com/mozilla-extensions/dnssec-interference",
   "dependencies": {
     "ip": "^1.1.5"
-  },
-  "devDependencies": {
-    "eslint": "^5.14.1",
-    "eslint-config-standard": "^12.0.0",
-    "eslint-plugin-import": "^2.16.0",
-    "eslint-plugin-node": "^8.0.1",
-    "eslint-plugin-promise": "^4.0.1",
-    "eslint-plugin-standard": "^4.0.0",
-    "nyc": "^13.3.0",
-    "tape": "^4.10.1"
   },
   "keywords": [
     "dns",
