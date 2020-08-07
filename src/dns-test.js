@@ -91,19 +91,32 @@ function encodeTCPQuery(domain, rrtype) {
 async function sendUDPQuery(domain, nameservers, rrtype) {
     let buf = encodeUDPQuery(domain, rrtype);
     for (let i = 0; i < nameservers.length; i++) {
+        let written = 0;
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
             try {
                 let nameserver = nameservers[i];
                 udpResponses[rrtype]["transmission"] += 1
-                await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
+                written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
             } catch(e) {
+                sendTelemetry({"reason": "sendUDPQueryError",
+                               "rrtype": rrtype,
+                               "transmission": udpResponses[rrtype]["transmission"]});
                 console.log("DNSSEC Interference Study: Failure while sending UDP query");
                 continue
             }
             await sleep(RESOLVCONF_TIMEOUT);
 
+            if (written <= 0) {
+                sendTelemetry({"reason": "sendUDPQueryError",
+                               "rrtype": rrtype,
+                               "transmission": udpResponses[rrtype]["transmission"]});
+                console.log("DNSSEC Interference Study: No bytes written for UDP query");
+                continue
+            }
+
             if (isUndefined(udpResponses[rrtype]["data"]) || udpResponses[rrtype]["data"] === "") {
                 console.log("DNSSEC Interference Study: No response received for UDP query");
+                continue
             } else {
                 return
             }
@@ -121,7 +134,16 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
         try {
             let nameserver = nameservers[i];
             tcpResponses[rrtype]["transmission"] += 1;
-            let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
+            let response = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
+            if (response.error_code != 0) {
+                sendTelemetry({"reason": "sendTCPQueryError",
+                               "rrtype": rrtype,
+                               "transmission": tcpResponses[rrtype]["transmission"]});
+                console.log("DNSSEC Interference Study: Failure while sending TCP query");
+                continue
+            }
+
+            let responseBytes = response.data;
             let responseString = String.fromCharCode(...responseBytes);
             tcpResponses[rrtype]["data"] = responseString;
 
@@ -132,7 +154,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             console.log(decodedResponse);
             return
         } catch (e) {
-            console.log("DNSSEC Interference Study: Failure while sending TCP query, or no response received");
+            console.log("DNSSEC Interference Study: Unknown error sending TCP query");
             continue
         }
 

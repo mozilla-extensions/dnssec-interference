@@ -146,20 +146,33 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                      * nameserver addressed by addr
                      */
                     async sendDNSQuery(addr, buf) {
-                        let tcp_socket = new TCPSocket(addr, 53, { binaryType: "arraybuffer" });
-                        let tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
+                        let tcp_socket;
+                        let tcp_event_queue;
+                        let answer = new Uint8Array();
+                        try {
+                            tcp_socket = new TCPSocket(addr, 53, { binaryType: "arraybuffer" });
+                            tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
 
-                        // Wait until the socket has opened a connection to the DNS server
-                        let nextEvent = (await tcp_event_queue.waitForEvent()).type;
-                        if (nextEvent == "open" && tcp_socket.readyState == "open") {
-                            console.log("client opened socket and readyState is open");
-                        } else {
-                            throw new Error("Could not open TCP socket");
+                            // Wait until the socket has opened a connection to the DNS server
+                            let nextEvent = (await tcp_event_queue.waitForEvent()).type;
+                            if (nextEvent == "open" && tcp_socket.readyState == "open") {
+                                console.log("client opened socket and readyState is open");
+                            } else {
+                                return {"error_code": 1, "data": answer};
+                            }
+                        } catch(e) {
+                            return {"error_code": 1, "data": answer};
                         }
 
-                        tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
-                        let answer = await tcp_event_queue.waitForDataWithAtLeastLength(buf.byteLength);
-                        return answer;
+                        try {
+                            tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
+                            answer = await tcp_event_queue.waitForDataWithAtLeastLength(buf.byteLength);
+                        } catch(e) {
+                            if (e.message != "only one wait allowed at a time.") {
+                                return {"error_code": 1, "data": answer};
+                            }
+                        }
+                        return {"error_code": 0, "data": answer};
                     }
                 },
             },
