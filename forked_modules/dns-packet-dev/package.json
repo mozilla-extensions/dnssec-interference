@@ -2,7 +2,7 @@
   "name": "dns-packet-dev",
   "version": "0.0.1",
   "description": "An abstract-encoding compliant module for encoding / decoding DNS packets",
-  "author": "Mathias Buus / Austin Hounsel",
+  "author": "Mathias Buus + Austin Hounsel",
   "license": "MIT",
   "repository": "mozilla-extensions/dnssec-interference",
   "homepage": "https://github.com/mozilla-extensions/dnssec-interference",
