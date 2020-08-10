@@ -9,7 +9,9 @@
   "dependencies": {
     "ip": "^1.1.5"
   },
-  "scripts": {},
+  "scripts": {
+    "build": "npm install --save"
+  },
   "keywords": [
     "dns",
     "packet",
