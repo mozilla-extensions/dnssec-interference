@@ -46,7 +46,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                             key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
                             let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
                             nameservers_registry = nameservers_registry.trim();
-                            nameservers_registry = nameservers_registry.match(/([0-9.]+)(\s|$)/);
+                            nameservers_registry = nameservers_registry.match(/([0-9.]+)(\s|$)/g);
                         } finally {
                             key.close();
                         }
