@@ -3111,7 +3111,7 @@ const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
-const TELEMETRY_TYPE = "dnssec-interference-study";
+const TELEMETRY_TYPE = "dnssec-study-v1";
 const TELEMETRY_OPTIONS = {
     addClientId: true,
     addEnvironment: true
@@ -3120,8 +3120,6 @@ const TELEMETRY_OPTIONS = {
 const MAX_TXID = 65535;
 const MIN_TXID = 0;
 
-var udp_query_proto;
-var tcp_query_proto;
 var measurement_id;
 
 var udpResponses = {"A":      {"data": "", "transmission": 0},
@@ -3159,7 +3157,6 @@ function encodeUDPQuery(domain, rrtype) {
             udpPayloadSize: 4096
         }]
     });
-    udp_query_proto = buf.__proto__;
     return buf
 }
 
@@ -3177,7 +3174,6 @@ function encodeTCPQuery(domain, rrtype) {
             name: domain
         }]
     });
-    tcp_query_proto = buf.__proto__;
     return buf;
 }
 
@@ -3247,12 +3243,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             let responseBytes = response.data;
             let responseString = String.fromCharCode(...responseBytes);
             tcpResponses[rrtype]["data"] = responseString;
-
-            // For debugging purposes
-            Object.setPrototypeOf(responseBytes, tcp_query_proto);
-            let decodedResponse = DNS_PACKET.streamDecode(responseBytes);
-            console.log(rrtype + ": TCP Response decoded");
-            console.log(decodedResponse);
+            console.log(rrtype + ": TCP response received");
             return
         } catch (e) {
             console.log("DNSSEC Interference Study: Unknown error sending TCP query");
@@ -3268,12 +3259,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
 function processUDPResponse(responseBytes, rrtype) {
     let responseString = String.fromCharCode(...responseBytes);
     udpResponses[rrtype]["data"] = responseString;
-
-    // For debugging purposes
-    Object.setPrototypeOf(responseBytes, udp_query_proto);
-    let decodedResponse = DNS_PACKET.decode(responseBytes);
-    console.log(rrtype + ": UDP Response decoded");
-    console.log(decodedResponse);
+    console.log(rrtype + ": UDP response received");
 }
 
 /**
