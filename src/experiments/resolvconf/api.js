@@ -24,7 +24,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         for (var i = 0; i < lines.length; i++) {
                             let line = lines[i];
                             if (line.startsWith("nameserver")) {
-                                let ns = line.split(" ")[1];
+                                let ns = /^nameserver\s+([0-9.]+)(\s|$)/.exec(line)[1];
                                 nameservers.push(ns);
                             }
                         }
@@ -37,15 +37,19 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                      */
                     async readNameserversWin() {
                         let nameservers = [];
-                        let rootKey = 0x80000002;
+                        let rootKey = Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE;
                         let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
                             Ci.nsIWindowsRegKey
                         );
 
-                        key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
-                        let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
-                        nameservers = nameservers_registry.split(" ");
-                        key.close();
+                        try {
+                            key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
+                            let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
+                            nameservers_registry = nameservers_registry.trim();
+                            nameservers_registry = nameservers_registry.match(/([0-9.]+)(\s|$)/);
+                        } finally {
+                            key.close();
+                        }
                         return nameservers;
                     }
                 }
