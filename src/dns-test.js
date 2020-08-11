@@ -208,7 +208,7 @@ async function readNameservers() {
         }
     } catch(e) {
         sendTelemetry({"reason": "readNameserversFileError"});
-        throw new Error("DNSSEC Interference Study: Couldn't find nameservers file");
+        throw e;
     } 
 
     if (!Array.isArray(nameservers) || nameservers.length <= 0) {

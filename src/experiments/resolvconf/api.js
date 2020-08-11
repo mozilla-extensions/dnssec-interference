@@ -3,6 +3,11 @@
 /* global ChromeUtils, ExtensionAPI, Cc, Ci, */
 
 const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
+const { ExtensionCommon } = ChromeUtils.import("resource://gre/modules/ExtensionCommon.jsm");
+const { ExtensionUtils } = ChromeUtils.import(
+  "resource://gre/modules/ExtensionUtils.jsm"
+);
+const { ExtensionError } = ExtensionUtils;
 
 const MAC_RESOLVCONF_PATH = "/etc/resolv.conf";
 const WIN_REGISTRY_TCPIP_PATH = "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters";
@@ -19,7 +24,13 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                      */
                     async readNameserversMac() {
                         let nameservers = [];
-                        let resolvconf_string = await OS.File.read(MAC_RESOLVCONF_PATH, { "encoding": "utf-8" });
+                        let resolvconf_string;
+                        try {
+                            resolvconf_string = await OS.File.read(MAC_RESOLVCONF_PATH, { "encoding": "utf-8" });
+                        } catch(e) {
+                            throw new ExtensionError("Couldn't read nameservers from /etc/resolv.conf");
+                        }
+
                         let lines = resolvconf_string.split("\n");
                         for (var i = 0; i < lines.length; i++) {
                             let line = lines[i];
@@ -47,6 +58,8 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                             let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
                             nameservers_registry = nameservers_registry.trim();
                             nameservers_registry = nameservers_registry.match(/([0-9.]+)(\s|$)/g);
+                        } catch {
+                            throw new ExtensionError("Couldn't read nameservers from registry");
                         } finally {
                             key.close();
                         }
