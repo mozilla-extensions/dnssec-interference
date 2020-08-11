@@ -1,5 +1,5 @@
 /* global browser */
-const DNS_PACKET = require("dns-packet-dev");
+const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
