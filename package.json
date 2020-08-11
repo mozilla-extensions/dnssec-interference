@@ -1,7 +1,8 @@
 {
-  "name": "dnssec-study",
-  "version": "0.0.1",
+  "name": "dnssec-interference-study",
+  "version": "1.0.0",
   "description": "DNSSEC Interference Study",
+  "main": "web-ext-config.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mozilla-extensions/dnssec-interference.git"
@@ -15,13 +16,16 @@
   "dependencies": {
     "browserify": "^16.5.2",
     "dns-packet-dev": "file:forked_modules/dns-packet-dev",
-    "uuid": "^8.3.0"
-  },
-  "devDependencies": {
-    "eslint": "^7.6.0"
+    "uuid": "^8.3.0",
+    "web-ext": "^5.0.0",
+    "npm-run-all": "^4.1.5"
   },
   "scripts": {
-    "build": "browserify src/dns-test.js -o src/background.js",
-    "lint": "npx eslint src/dns-test.js; npx eslint src/experiments/resolvconf/api.js; npx eslint src/experiments/tcpsocket/api.js; npx eslint src/experiments/udpsocket/api.js"
+    "build": "npm-run-all clean build:background build:extension build:finalize",
+    "build:background": "browserify src/dns-test.js -o src/background.js",
+    "build:extension": "web-ext build",
+    "build:finalize": "mv web-ext-artifacts/*.zip web-ext-artifacts/dnssec-interference-study.xpi",
+    "clean": "rm -rf dist web-ext-artifacts",
+    "test": "echo 'not implemented'"
   }
 }
