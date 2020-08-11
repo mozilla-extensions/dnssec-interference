@@ -15,8 +15,6 @@
         "telemetry"
     ],
 
-    "browser_action": {},
-
     "background": {
         "scripts": ["background.js"]
     },
