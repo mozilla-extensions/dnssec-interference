@@ -21,21 +21,39 @@ const MIN_TXID = 0;
 
 var measurement_id;
 
-var udpResponses = {"A":      {"data": "", "transmission": 0},
-                    "RRSIG":  {"data": "", "transmission": 0},
-                    "DNSKEY": {"data": "", "transmission": 0},
-                    "SMIMEA": {"data": "", "transmission": 0},
-                    "HTTPS":  {"data": "", "transmission": 0},
-                    "NEWONE": {"data": "", "transmission": 0},
-                    "NEWTWO": {"data": "", "transmission": 0}};
+var dnsData = {
+    "udpA":      [],
+    "udpRRSIG":  [],
+    "udpDNSKEY": [],
+    "udpSMIMEA": [],
+    "udpHTTPS":  [],
+    "udpNEWONE": [],
+    "udpNEWTWO": [],
+    "tcpA":      [],
+    "tcpRRSIG":  [],
+    "tcpDNSKEY": [],
+    "tcpSMIMEA": [],
+    "tcpHTTPS":  [],
+    "tcpNEWONE": [],
+    "tcpNEWTWO": []
+};
 
-var tcpResponses = {"A":      {"data": "", "transmission": 0},
-                    "RRSIG":  {"data": "", "transmission": 0},
-                    "DNSKEY": {"data": "", "transmission": 0},
-                    "SMIMEA": {"data": "", "transmission": 0},
-                    "HTTPS":  {"data": "", "transmission": 0},
-                    "NEWONE": {"data": "", "transmission": 0},
-                    "NEWTWO": {"data": "", "transmission": 0}};
+var dnsAttempts = {
+    "udpA":      0,
+    "udpRRSIG":  0,
+    "udpDNSKEY": 0,
+    "udpSMIMEA": 0,
+    "udpHTTPS":  0,
+    "udpNEWONE": 0,
+    "udpNEWTWO": 0,
+    "tcpA":      0,
+    "tcpRRSIG":  0,
+    "tcpDNSKEY": 0,
+    "tcpSMIMEA": 0,
+    "tcpHTTPS":  0,
+    "tcpNEWONE": 0,
+    "tcpNEWTWO": 0 
+};
 
 /**
  * Encode a DNS query to be sent over a UDP socket
@@ -91,12 +109,12 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
             try {
                 let nameserver = nameservers[i];
-                udpResponses[rrtype]["transmission"] += 1
+                dnsAttempts["udp" + rrtype] += 1
                 written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
             } catch(e) {
                 sendTelemetry({"reason": "sendUDPQueryError",
-                               "rrtype": rrtype,
-                               "transmission": udpResponses[rrtype]["transmission"]});
+                               "errorRRTYPE": rrtype,
+                               "errorAttempt": dnsAttempts["udp" + rrtype]});
                 console.log("DNSSEC Interference Study: Failure while sending UDP query");
                 continue
             }
@@ -104,13 +122,13 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
 
             if (written <= 0) {
                 sendTelemetry({"reason": "sendUDPQueryError",
-                               "rrtype": rrtype,
-                               "transmission": udpResponses[rrtype]["transmission"]});
+                               "errorRRTYPE": rrtype,
+                               "errorAttempt": dnsAttempts["udp" + rrtype]});
                 console.log("DNSSEC Interference Study: No bytes written for UDP query");
                 continue
             }
 
-            if (isUndefined(udpResponses[rrtype]["data"]) || udpResponses[rrtype]["data"] === "") {
+            if (dnsData["udp" + rrtype].length == 0) {
                 console.log("DNSSEC Interference Study: No response received for UDP query");
                 continue
             } else {
@@ -129,20 +147,20 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
     for (let i = 0; i < nameservers.length; i++) {
         try {
             let nameserver = nameservers[i];
-            tcpResponses[rrtype]["transmission"] += 1;
+            dnsAttempts["tcp" + rrtype] += 1;
             let response = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
             if (response.error_code != 0) {
                 sendTelemetry({"reason": "sendTCPQueryError",
-                               "rrtype": rrtype,
-                               "transmission": tcpResponses[rrtype]["transmission"]});
+                               "errorRRTYPE": rrtype,
+                               "errorAttempt": dnsAttempts["tcp" + rrtype]});
                 console.log("DNSSEC Interference Study: Failure while sending TCP query");
                 continue
             }
 
-            let responseBytes = response.data;
-            let responseString = String.fromCharCode(...responseBytes);
-            tcpResponses[rrtype]["data"] = responseString;
-            console.log(rrtype + ": TCP response received");
+            if (dnsData["tcp" + rrtype].length == 0) {
+                dnsData["tcp" + rrtype] = response.data;
+                console.log(rrtype + ": TCP response received");
+            }
             return
         } catch (e) {
             console.log("DNSSEC Interference Study: Unknown error sending TCP query");
@@ -156,9 +174,10 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
  * Event listener that responds to packets that we receive from our UDP sockets
  */
 function processUDPResponse(responseBytes, rrtype) {
-    let responseString = String.fromCharCode(...responseBytes);
-    udpResponses[rrtype]["data"] = responseString;
-    console.log(rrtype + ": UDP response received");
+    if (dnsData["udp" + rrtype].length == 0) {
+        dnsData["udp" + rrtype] = responseBytes;
+        console.log(rrtype + ": UDP response received");
+    }
 }
 
 /**
@@ -252,14 +271,9 @@ async function sendQueries(nameservers_ipv4) {
 
     // Add the DNS responses as strings to an object, and send the object to telemetry
     let payload = {"reason": "measurementCompleted"};
-    for (let i = 0; i < RRTYPES.length; i++) {
-        let rrtype = RRTYPES[i];
-        payload[rrtype + "_udp_data"] = udpResponses[rrtype]["data"];
-        payload[rrtype + "_udp_transmission"] = udpResponses[rrtype]["transmission"].toString();
-        payload[rrtype + "_tcp_data"] = tcpResponses[rrtype]["data"];
-        payload[rrtype + "_tcp_transmission"] = tcpResponses[rrtype]["transmission"].toString();
-    }
-   sendTelemetry(payload);
+    payload["dnsData"] = dnsData;
+    payload["dnsAttempts"] = dnsAttempts;
+    sendTelemetry(payload);
 }
 
 /**
