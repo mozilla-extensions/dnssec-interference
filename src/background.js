@@ -5352,13 +5352,6 @@ function processUDPResponse(responseBytes, rrtype) {
 }
 
 /**
- * Check if an object is undefined or null
- */
-function isUndefined(x) {
-    return (typeof(x) === 'undefined' || x === null);
-}
-
-/**
  * Sleep implementation
  */
 function sleep(ms) {
@@ -5387,14 +5380,14 @@ async function readNameservers() {
         throw e;
     } 
 
-    if (!Array.isArray(nameservers) || nameservers.length <= 0) {
+    if (!nameserver.length) {
         sendTelemetry({reason: "noNameserversInFileError"});
         throw new Error("No nameservers found in /etc/resolv.conf or registry");
     }
 
     let nameservers_ipv4 = [];
     for (let nameserver of nameservers) {
-        if (!isUndefined(nameserver) && nameserver.includes(".")) {
+        if (!nameserver) {
             nameservers_ipv4.push(nameserver);
         }
     }
