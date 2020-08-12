@@ -5282,21 +5282,25 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
             try {
                 dnsAttempts["udp" + rrtype] += 1
-                await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
+                let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
+                // await sleep(RESOLVCONF_TIMEOUT);
+
+                // If we don't already have a response saved in dnsData, save this one
+                if (dnsData["udp" + rrtype].length == 0) {
+                    dnsData["udp" + rrtype] = responseBytes;
+                    buf = Buffer.from(responseBytes);
+                    decodedResponse = DNS_PACKET.decode(buf);
+                    console.log(rrtype + ": decoded UDP response");
+                    console.log(decodedResponse);
+                }
+                // If we didn't get an error, return.
+                // We don't need to re-transmit.
+                return;
             } catch(e) {
                 sendTelemetry({reason: "sendUDPQueryError",
                                errorRRTYPE: rrtype,
                                errorAttempt: dnsAttempts["udp" + rrtype]});
                 console.log("DNSSEC Interference Study: Failure while sending UDP query");
-                continue
-            }
-            await sleep(RESOLVCONF_TIMEOUT);
-
-            if (dnsData["udp" + rrtype].length == 0) {
-                console.log("DNSSEC Interference Study: No response received for UDP query");
-                continue
-            } else {
-                return
             }
         }
     }
@@ -5313,16 +5317,17 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             dnsAttempts["tcp" + rrtype] += 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
 
+            // If we don't already have a response saved in dnsData, save this one
             if (dnsData["tcp" + rrtype].length == 0) {
                 dnsData["tcp" + rrtype] = responseBytes;
-
-                // Used for debugging purposes
                 buf = Buffer.from(responseBytes);
                 decodedResponse = DNS_PACKET.streamDecode(buf);
                 console.log(rrtype + ": decoded TCP response");
                 console.log(decodedResponse);
             }
-            return
+            // If we didn't get an error, return.
+            // We don't need to re-transmit.
+            return;
         } catch (e) {
             console.log("DNSSEC Interference Study: Failure while sending TCP query");
             sendTelemetry({reason: "sendTCPQueryError",
@@ -5330,28 +5335,6 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
                            errorAttempt: dnsAttempts["tcp" + rrtype]});
         }
     }
-}
-
-/**
- * Event listener that responds to packets that we receive from our UDP sockets
- */
-function processUDPResponse(responseBytes, rrtype) {
-    if (dnsData["udp" + rrtype].length == 0) {
-        dnsData["udp" + rrtype] = responseBytes;
-
-        // Used for debugging purposes
-        buf = Buffer.from(responseBytes);
-        decodedResponse = DNS_PACKET.decode(buf);
-        console.log(rrtype + ": decoded UDP response");
-        console.log(decodedResponse);
-    }
-}
-
-/**
- * Sleep implementation
- */
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
@@ -5396,20 +5379,6 @@ async function readNameservers() {
 }
 
 /**
- * Open the UDP sockets and add an event listener for when we receive UDP 
- * responses.
- */
-async function setupUDPCode() {
-    try {
-        await browser.experiments.udpsocket.openSocket();
-        browser.experiments.udpsocket.onDNSResponseReceived.addListener(processUDPResponse);
-    } catch(e) {
-        sendTelemetry({reason: "openUDPSocketsError"});
-        throw new Error("DNSSEC Interference Study: Couldn't set up UDP socket or reason listener");
-    }
-}
-
-/**
  * For each RR type that we have a DNS record for, attempt to send queries over 
  * UDP and TCP.
  */
@@ -5448,14 +5417,6 @@ function sendTelemetry(payload) {
 }
 
 /**
- * Close UDP sockets once we're done with the measurement. The single TCP 
- * socket we use is opened/closed for each query/response.
- */
-function cleanup() {
-    browser.experiments.udpsocket.onDNSResponseReceived.removeListener(processUDPResponse);
-}
-
-/**
  * Entry point for our measurements.
  */
 async function runMeasurement() {
@@ -5464,12 +5425,10 @@ async function runMeasurement() {
     sendTelemetry({reason: "startup"});
 
     let nameservers_ipv4 = await readNameservers();
-    await setupUDPCode();
     await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the end of the measurement
     sendTelemetry({reason: "end"});
-    cleanup();
 }
 
 runMeasurement();
