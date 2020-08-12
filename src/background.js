@@ -5278,11 +5278,10 @@ function encodeTCPQuery(domain, rrtype) {
 async function sendUDPQuery(domain, nameservers, rrtype) {
     let buf = encodeUDPQuery(domain, rrtype);
     for (let nameserver of nameservers) {
-        let written = 0;
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
             try {
                 dnsAttempts["udp" + rrtype] += 1
-                written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
+                await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
             } catch(e) {
                 sendTelemetry({reason: "sendUDPQueryError",
                                errorRRTYPE: rrtype,
@@ -5291,14 +5290,6 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 continue
             }
             await sleep(RESOLVCONF_TIMEOUT);
-
-            if (written <= 0) {
-                sendTelemetry({reason: "sendUDPQueryError",
-                               errorRRTYPE: rrtype,
-                               errorAttempt: dnsAttempts["udp" + rrtype]});
-                console.log("DNSSEC Interference Study: No bytes written for UDP query");
-                continue
-            }
 
             if (dnsData["udp" + rrtype].length == 0) {
                 console.log("DNSSEC Interference Study: No response received for UDP query");
@@ -5320,24 +5311,18 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
         try {
             dnsAttempts["tcp" + rrtype] += 1;
             let response = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
-            if (response.error_code != 0) {
-                sendTelemetry({reason: "sendTCPQueryError",
-                               errorRRTYPE: rrtype,
-                               errorAttempt: dnsAttempts["tcp" + rrtype]});
-                console.log("DNSSEC Interference Study: Failure while sending TCP query");
-                continue
-            }
 
             if (dnsData["tcp" + rrtype].length == 0) {
-                dnsData["tcp" + rrtype] = response.data;
+                dnsData["tcp" + rrtype] = response;
                 console.log(rrtype + ": TCP response received");
             }
             return
         } catch (e) {
-            console.log("DNSSEC Interference Study: Unknown error sending TCP query");
-            continue
+            console.log("DNSSEC Interference Study: Failure while sending TCP query");
+            sendTelemetry({reason: "sendTCPQueryError",
+                           errorRRTYPE: rrtype,
+                           errorAttempt: dnsAttempts["tcp" + rrtype]});
         }
-
     }
 }
 
@@ -5387,7 +5372,6 @@ async function readNameservers() {
 
     let nameservers_ipv4 = [];
     for (let nameserver of nameservers) {
-        console.log(/([0-9.]+)(\s|$)/.test(nameserver));
         if (nameserver && /([0-9.]+)(\s|$)/.test(nameserver)) {
             nameservers_ipv4.push(nameserver);
         }

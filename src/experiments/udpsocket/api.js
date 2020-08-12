@@ -23,8 +23,16 @@ const sockets_ipv4 = {A:      socket_ipv4_a,
                       NEWONE: socket_ipv4_newone,
                       NEWTWO: socket_ipv4_newtwo}
 
+function closeSockets() {
+    for (const rrtype in sockets_ipv4) {
+        let socket = sockets_ipv4[rrtype];
+        socket.close();
+    }
+}
+
 var udpsocket = class udpsocket extends ExtensionAPI {
   getAPI(context) {
+    context.callOnClose(closeSockets);
     return {
       experiments: {
         udpsocket: {
@@ -64,10 +72,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                 }
                 return () => {
                     console.log("Closing sockets");
-                    for (const rrtype in sockets_ipv4) {
-                        let socket = sockets_ipv4[rrtype];
-                        socket.close()
-                    }
+                    closeSockets();
                 }
               }
           }).api(),
@@ -80,8 +85,9 @@ var udpsocket = class udpsocket extends ExtensionAPI {
             let written;
             let socket = sockets_ipv4[rrtype];
             written = socket.send(addr, 53, buf);
-            console.log(addr, written);
-            return written;
+            if (written != buf.length) {
+                throw new ExtensionError("UDP socket didn't write expected number of bytes");
+            }
           },
         },
       },

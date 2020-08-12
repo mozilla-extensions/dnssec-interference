@@ -6,6 +6,8 @@ const { TCPSocket } = Cu.getGlobalForObject(
     ChromeUtils.import("resource://gre/modules/Services.jsm")
 );
 
+var tcp_socket;
+
 /**
  * Concatenate two Uint8Array objects
  */
@@ -136,8 +138,15 @@ function listenForEventsOnSocket(socket, socketType) {
     };
 }
 
+function closeSocket() {
+    if (!tcp_socket) {
+        tcp_socket.close();
+    }
+}
+
 var tcpsocket = class tcpsocket extends ExtensionAPI {
     getAPI(context) {
+        context.callOnClose(closeSocket);
         return {
             experiments: {
                 tcpsocket: {
@@ -146,33 +155,46 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                      * nameserver addressed by addr
                      */
                     async sendDNSQuery(addr, buf) {
-                        let tcp_socket;
                         let tcp_event_queue;
+                        let nextEvent;
                         let answer = new Uint8Array();
+
+                        // Open the TCP socket
                         try {
                             tcp_socket = new TCPSocket(addr, 53, { binaryType: "arraybuffer" });
-                            tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
-
-                            // Wait until the socket has opened a connection to the DNS server
-                            let nextEvent = (await tcp_event_queue.waitForEvent()).type;
-                            if (nextEvent == "open" && tcp_socket.readyState == "open") {
-                                console.log("client opened socket and readyState is open");
-                            } else {
-                                return {error_code: 1, data: answer};
-                            }
                         } catch(e) {
-                            return {error_code: 1, data: answer};
+                            throw new ExtensionError(e.message);
                         }
 
+                        // Wait for the next event
+                        try {
+                            tcp_event_queue = listenForEventsOnSocket(tcp_socket, "client");
+                            nextEvent = (await tcp_event_queue.waitForEvent()).type;
+                        } catch(e) {
+                            tcp_socket.close();
+                            throw new ExtensionError(e.message);
+                        }
+                       
+                        // If the next event isn't 'open', close the socket and return
+                        if (nextEvent == "open" && tcp_socket.readyState == "open") {
+                            console.log("client opened socket and readyState is open");
+                        } else {
+                            tcp_socket.close();
+                            throw new ExtensionError("Didn't get open event for TCP socket");
+                        }
+
+                        // Send the query, wait for an answer, and then close the socket
                         try {
                             tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
                             answer = await tcp_event_queue.waitForDataWithAtLeastLength(buf.byteLength);
                         } catch(e) {
                             if (e.message != "only one wait allowed at a time.") {
-                                return {error_code: 1, data: answer};
+                                throw new ExtensionError("Error while sending TCP query");
                             }
+                        } finally {
+                            tcp_socket.close();
                         }
-                        return {error_code: 0, data: answer};
+                        return answer;
                     }
                 },
             },
