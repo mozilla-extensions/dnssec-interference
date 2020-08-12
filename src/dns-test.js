@@ -214,7 +214,7 @@ async function readNameservers() {
 
     let nameservers_ipv4 = [];
     for (let nameserver of nameservers) {
-        if (!nameserver) {
+        if (nameserver && /([0-9.]+)(\s|$)/.test(nameserver)) {
             nameservers_ipv4.push(nameserver);
         }
     }

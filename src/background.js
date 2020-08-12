@@ -5380,14 +5380,15 @@ async function readNameservers() {
         throw e;
     } 
 
-    if (!nameserver.length) {
+    if (!nameservers.length) {
         sendTelemetry({reason: "noNameserversInFileError"});
         throw new Error("No nameservers found in /etc/resolv.conf or registry");
     }
 
     let nameservers_ipv4 = [];
     for (let nameserver of nameservers) {
-        if (!nameserver) {
+        console.log(/([0-9.]+)(\s|$)/.test(nameserver));
+        if (nameserver && /([0-9.]+)(\s|$)/.test(nameserver)) {
             nameservers_ipv4.push(nameserver);
         }
     }
