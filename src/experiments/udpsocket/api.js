@@ -79,7 +79,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
           sendDNSQuery(addr, buf, rrtype) {
             let written;
             let socket = sockets_ipv4[rrtype];
-            written = socket.send(addr, 53, buf, buf.length);
+            written = socket.send(addr, 53, buf);
             console.log(addr, written);
             return written;
           },
