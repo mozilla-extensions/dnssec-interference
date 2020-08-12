@@ -5171,13 +5171,14 @@ function version(uuid) {
 var _default = version;
 exports.default = _default;
 },{"./validate.js":25}],27:[function(require,module,exports){
+(function (Buffer){
 /* global browser */
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2a._smimecert.dnssec-experiment-moz.net";
-const HTTPS_DOMAIN_NAME = "_443._tcp.dnssec-experiment-moz.net";
+const HTTPS_DOMAIN_NAME = "dnssec-experiment-moz.net";
 
 const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
@@ -5310,11 +5311,16 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
     for (let nameserver of nameservers) {
         try {
             dnsAttempts["tcp" + rrtype] += 1;
-            let response = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
+            let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
 
             if (dnsData["tcp" + rrtype].length == 0) {
-                dnsData["tcp" + rrtype] = response;
-                console.log(rrtype + ": TCP response received");
+                dnsData["tcp" + rrtype] = responseBytes;
+
+                // Used for debugging purposes
+                buf = Buffer.from(responseBytes);
+                decodedResponse = DNS_PACKET.streamDecode(buf);
+                console.log(rrtype + ": decoded TCP response");
+                console.log(decodedResponse);
             }
             return
         } catch (e) {
@@ -5332,7 +5338,12 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
 function processUDPResponse(responseBytes, rrtype) {
     if (dnsData["udp" + rrtype].length == 0) {
         dnsData["udp" + rrtype] = responseBytes;
-        console.log(rrtype + ": UDP response received");
+
+        // Used for debugging purposes
+        buf = Buffer.from(responseBytes);
+        decodedResponse = DNS_PACKET.decode(buf);
+        console.log(rrtype + ": decoded UDP response");
+        console.log(decodedResponse);
     }
 }
 
@@ -5463,4 +5474,5 @@ async function runMeasurement() {
 
 runMeasurement();
 
-},{"dns-packet":4,"uuid":12}]},{},[27]);
+}).call(this,require("buffer").Buffer)
+},{"buffer":2,"dns-packet":4,"uuid":12}]},{},[27]);
