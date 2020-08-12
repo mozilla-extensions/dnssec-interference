@@ -22,37 +22,37 @@ const MIN_TXID = 0;
 var measurement_id;
 
 var dnsData = {
-    "udpA":      [],
-    "udpRRSIG":  [],
-    "udpDNSKEY": [],
-    "udpSMIMEA": [],
-    "udpHTTPS":  [],
-    "udpNEWONE": [],
-    "udpNEWTWO": [],
-    "tcpA":      [],
-    "tcpRRSIG":  [],
-    "tcpDNSKEY": [],
-    "tcpSMIMEA": [],
-    "tcpHTTPS":  [],
-    "tcpNEWONE": [],
-    "tcpNEWTWO": []
+    udpA:      [],
+    udpRRSIG:  [],
+    udpDNSKEY: [],
+    udpSMIMEA: [],
+    udpHTTPS:  [],
+    udpNEWONE: [],
+    udpNEWTWO: [],
+    tcpA:      [],
+    tcpRRSIG:  [],
+    tcpDNSKEY: [],
+    tcpSMIMEA: [],
+    tcpHTTPS:  [],
+    tcpNEWONE: [],
+    tcpNEWTWO: []
 };
 
 var dnsAttempts = {
-    "udpA":      0,
-    "udpRRSIG":  0,
-    "udpDNSKEY": 0,
-    "udpSMIMEA": 0,
-    "udpHTTPS":  0,
-    "udpNEWONE": 0,
-    "udpNEWTWO": 0,
-    "tcpA":      0,
-    "tcpRRSIG":  0,
-    "tcpDNSKEY": 0,
-    "tcpSMIMEA": 0,
-    "tcpHTTPS":  0,
-    "tcpNEWONE": 0,
-    "tcpNEWTWO": 0 
+    udpA:      0,
+    udpRRSIG:  0,
+    udpDNSKEY: 0,
+    udpSMIMEA: 0,
+    udpHTTPS:  0,
+    udpNEWONE: 0,
+    udpNEWTWO: 0,
+    tcpA:      0,
+    tcpRRSIG:  0,
+    tcpDNSKEY: 0,
+    tcpSMIMEA: 0,
+    tcpHTTPS:  0,
+    tcpNEWONE: 0,
+    tcpNEWTWO: 0 
 };
 
 /**
@@ -112,18 +112,18 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 dnsAttempts["udp" + rrtype] += 1
                 written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
             } catch(e) {
-                sendTelemetry({"reason": "sendUDPQueryError",
-                               "errorRRTYPE": rrtype,
-                               "errorAttempt": dnsAttempts["udp" + rrtype]});
+                sendTelemetry({reason: "sendUDPQueryError",
+                               errorRRTYPE: rrtype,
+                               errorAttempt: dnsAttempts["udp" + rrtype]});
                 console.log("DNSSEC Interference Study: Failure while sending UDP query");
                 continue
             }
             await sleep(RESOLVCONF_TIMEOUT);
 
             if (written <= 0) {
-                sendTelemetry({"reason": "sendUDPQueryError",
-                               "errorRRTYPE": rrtype,
-                               "errorAttempt": dnsAttempts["udp" + rrtype]});
+                sendTelemetry({reason: "sendUDPQueryError",
+                               errorRRTYPE: rrtype,
+                               errorAttempt: dnsAttempts["udp" + rrtype]});
                 console.log("DNSSEC Interference Study: No bytes written for UDP query");
                 continue
             }
@@ -150,9 +150,9 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             dnsAttempts["tcp" + rrtype] += 1;
             let response = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
             if (response.error_code != 0) {
-                sendTelemetry({"reason": "sendTCPQueryError",
-                               "errorRRTYPE": rrtype,
-                               "errorAttempt": dnsAttempts["tcp" + rrtype]});
+                sendTelemetry({reason: "sendTCPQueryError",
+                               errorRRTYPE: rrtype,
+                               errorAttempt: dnsAttempts["tcp" + rrtype]});
                 console.log("DNSSEC Interference Study: Failure while sending TCP query");
                 continue
             }
@@ -208,16 +208,16 @@ async function readNameservers() {
         } else if (platform.os == "win") {
             nameservers = await browser.experiments.resolvconf.readNameserversWin();
         } else {
-            sendTelemetry({"reason": "osNotSupportedError"});
+            sendTelemetry({reason: "osNotSupportedError"});
             throw new Error("DNSSEC Interference Study: OS not supported");
         }
     } catch(e) {
-        sendTelemetry({"reason": "readNameserversFileError"});
+        sendTelemetry({reason: "readNameserversFileError"});
         throw e;
     } 
 
     if (!Array.isArray(nameservers) || nameservers.length <= 0) {
-        sendTelemetry({"reason": "noNameserversInFileError"});
+        sendTelemetry({reason: "noNameserversInFileError"});
         throw new Error("No nameservers found in /etc/resolv.conf or registry");
     }
 
@@ -230,7 +230,7 @@ async function readNameservers() {
     }
 
     if (nameservers_ipv4.length <= 0) {
-        sendTelemetry({"reason": "noIPv4NameserversError"});
+        sendTelemetry({reason: "noIPv4NameserversError"});
         throw new Error("DNSSEC Interference Study: No IPv4 nameservers found");
     }
     return nameservers_ipv4;
@@ -245,7 +245,7 @@ async function setupUDPCode() {
         await browser.experiments.udpsocket.openSocket();
         browser.experiments.udpsocket.onDNSResponseReceived.addListener(processUDPResponse);
     } catch(e) {
-        sendTelemetry({"reason": "openUDPSocketsError"});
+        sendTelemetry({reason: "openUDPSocketsError"});
         throw new Error("DNSSEC Interference Study: Couldn't set up UDP socket or reason listener");
     }
 }
@@ -270,9 +270,9 @@ async function sendQueries(nameservers_ipv4) {
     }
 
     // Add the DNS responses as strings to an object, and send the object to telemetry
-    let payload = {"reason": "measurementCompleted"};
-    payload["dnsData"] = dnsData;
-    payload["dnsAttempts"] = dnsAttempts;
+    let payload = {reason: "measurementCompleted"};
+    payload.dnsData = dnsData;
+    payload.dnsAttempts = dnsAttempts;
     sendTelemetry(payload);
 }
 
@@ -282,10 +282,10 @@ async function sendQueries(nameservers_ipv4) {
  */
 function sendTelemetry(payload) {
     try {
-        payload["measurement_id"] = measurement_id;
+        payload.measurement_id = measurement_id;
         browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
     } catch(e) {
-        console.log("DNSSEC Interference Study: Couldn't send telemetry for reason " + payload["reason"]);
+        console.log("DNSSEC Interference Study: Couldn't send telemetry for reason " + payload[reason]);
     }
 }
 
@@ -303,14 +303,14 @@ function cleanup() {
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
     measurement_id = uuidv4();
-    sendTelemetry({"reason": "startup"});
+    sendTelemetry({reason: "startup"});
 
     let nameservers_ipv4 = await readNameservers();
     await setupUDPCode();
     await sendQueries(nameservers_ipv4);
 
     // Send a ping to indicate the end of the measurement
-    sendTelemetry({"reason": "end"});
+    sendTelemetry({reason: "end"});
     cleanup();
 }
 

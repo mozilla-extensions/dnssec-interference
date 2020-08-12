@@ -15,13 +15,13 @@ const socket_ipv4_https     = Cc["@mozilla.org/network/udp-socket;1"].createInst
 const socket_ipv4_newone    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 const socket_ipv4_newtwo    = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
 
-const sockets_ipv4 = {"A":      socket_ipv4_a,
-                      "RRSIG":  socket_ipv4_rrsig,
-                      "DNSKEY": socket_ipv4_dnskey, 
-                      "SMIMEA": socket_ipv4_smimea,
-                      "HTTPS":  socket_ipv4_https,
-                      "NEWONE": socket_ipv4_newone,
-                      "NEWTWO": socket_ipv4_newtwo}
+const sockets_ipv4 = {A:      socket_ipv4_a,
+                      RRSIG:  socket_ipv4_rrsig,
+                      DNSKEY: socket_ipv4_dnskey, 
+                      SMIMEA: socket_ipv4_smimea,
+                      HTTPS:  socket_ipv4_https,
+                      NEWONE: socket_ipv4_newone,
+                      NEWTWO: socket_ipv4_newtwo}
 
 var udpsocket = class udpsocket extends ExtensionAPI {
   getAPI(context) {

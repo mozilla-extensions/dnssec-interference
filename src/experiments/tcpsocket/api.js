@@ -158,10 +158,10 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                             if (nextEvent == "open" && tcp_socket.readyState == "open") {
                                 console.log("client opened socket and readyState is open");
                             } else {
-                                return {"error_code": 1, "data": answer};
+                                return {error_code: 1, data: answer};
                             }
                         } catch(e) {
-                            return {"error_code": 1, "data": answer};
+                            return {error_code: 1, data: answer};
                         }
 
                         try {
@@ -169,10 +169,10 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                             answer = await tcp_event_queue.waitForDataWithAtLeastLength(buf.byteLength);
                         } catch(e) {
                             if (e.message != "only one wait allowed at a time.") {
-                                return {"error_code": 1, "data": answer};
+                                return {error_code: 1, data: answer};
                             }
                         }
-                        return {"error_code": 0, "data": answer};
+                        return {error_code: 0, data: answer};
                     }
                 },
             },
