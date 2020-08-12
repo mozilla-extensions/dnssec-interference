@@ -207,7 +207,7 @@ async function readNameservers() {
         throw e;
     } 
 
-    if (!nameserver.length) {
+    if (!nameservers.length) {
         sendTelemetry({reason: "noNameserversInFileError"});
         throw new Error("No nameservers found in /etc/resolv.conf or registry");
     }
