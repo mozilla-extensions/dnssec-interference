@@ -28,14 +28,14 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         try {
                             resolvconf_string = await OS.File.read(MAC_RESOLVCONF_PATH, { "encoding": "utf-8" });
                         } catch(e) {
-                            throw new ExtensionError("Couldn't read nameservers from /etc/resolv.conf");
+                            throw new ExtensionError("Couldn't read /etc/resolv.conf");
                         }
 
                         let lines = resolvconf_string.split("\n");
                         for (let line of lines) {
-                            if (line.startsWith("nameserver")) {
-                                let ns = /^nameserver\s+([0-9.]+)(\s|$)/.exec(line)[1];
-                                nameservers.push(ns);
+                            let match = /^nameserver\s+([0-9.]+)(\s|$)/.exec(line);
+                            if (match) {
+                                nameservers.push(match[1]);
                             }
                         }
                         return nameservers;
@@ -58,7 +58,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                             nameservers_registry = nameservers_registry.trim();
                             nameservers_registry = nameservers_registry.match(/([0-9.]+)(\s|$)/g);
                         } catch {
-                            throw new ExtensionError("Couldn't read nameservers from registry");
+                            throw new ExtensionError("Couldn't read Windows registry that contains nameservers");
                         } finally {
                             key.close();
                         }
