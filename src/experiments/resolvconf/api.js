@@ -32,8 +32,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         }
 
                         let lines = resolvconf_string.split("\n");
-                        for (var i = 0; i < lines.length; i++) {
-                            let line = lines[i];
+                        for (let line of lines) {
                             if (line.startsWith("nameserver")) {
                                 let ns = /^nameserver\s+([0-9.]+)(\s|$)/.exec(line)[1];
                                 nameservers.push(ns);

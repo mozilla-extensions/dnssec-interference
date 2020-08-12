@@ -104,11 +104,10 @@ function encodeTCPQuery(domain, rrtype) {
  */
 async function sendUDPQuery(domain, nameservers, rrtype) {
     let buf = encodeUDPQuery(domain, rrtype);
-    for (let i = 0; i < nameservers.length; i++) {
+    for (let nameserver of nameservers) {
         let written = 0;
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
             try {
-                let nameserver = nameservers[i];
                 dnsAttempts["udp" + rrtype] += 1
                 written = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
             } catch(e) {
@@ -144,9 +143,8 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
  */
 async function sendTCPQuery(domain, nameservers, rrtype) {
     let buf = encodeTCPQuery(domain, rrtype);
-    for (let i = 0; i < nameservers.length; i++) {
+    for (let nameserver of nameservers) {
         try {
-            let nameserver = nameservers[i];
             dnsAttempts["tcp" + rrtype] += 1;
             let response = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
             if (response.error_code != 0) {
@@ -222,10 +220,9 @@ async function readNameservers() {
     }
 
     let nameservers_ipv4 = [];
-    for (var i = 0; i < nameservers.length; i++) {
-        let ns = nameservers[i];
-        if (!isUndefined(ns) && ns.includes(".")) {
-            nameservers_ipv4.push(ns);
+    for (let nameserver of nameservers) {
+        if (!isUndefined(nameserver) && nameserver.includes(".")) {
+            nameservers_ipv4.push(nameserver);
         }
     }
 
@@ -255,8 +252,7 @@ async function setupUDPCode() {
  * UDP and TCP.
  */
 async function sendQueries(nameservers_ipv4) {
-    for (let i = 0; i < RRTYPES.length; i++) {
-        let rrtype = RRTYPES[i];
+    for (let rrtype of RRTYPES) {
         if (rrtype == 'SMIMEA') {
             await sendUDPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
             await sendTCPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
