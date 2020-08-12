@@ -179,13 +179,6 @@ function processUDPResponse(responseBytes, rrtype) {
 }
 
 /**
- * Check if an object is undefined or null
- */
-function isUndefined(x) {
-    return (typeof(x) === 'undefined' || x === null);
-}
-
-/**
  * Sleep implementation
  */
 function sleep(ms) {
@@ -221,7 +214,7 @@ async function readNameservers() {
 
     let nameservers_ipv4 = [];
     for (let nameserver of nameservers) {
-        if (!isUndefined(nameserver) && nameserver.includes(".")) {
+        if (!nameserver) {
             nameservers_ipv4.push(nameserver);
         }
     }
