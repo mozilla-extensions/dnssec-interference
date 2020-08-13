@@ -5296,7 +5296,13 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 return;
             } catch(e) {
                 console.log("DNSSEC Interference Study: " + e.message);
-                sendTelemetry({reason: "sendUDPQueryError",
+                let errorReason;
+                if (e.message == "UDP query timed out") {
+                    errorReason = "udpQueryTimeoutError";
+                } else {
+                    errorReason = "sendUDPQueryError";
+                }
+                sendTelemetry({reason: errorReason,
                                errorRRTYPE: rrtype,
                                errorAttempt: dnsAttempts["udp" + rrtype]});
             }
@@ -5328,7 +5334,13 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             return;
         } catch (e) {
             console.log("DNSSEC Interference Study: " + e.message);
-            sendTelemetry({reason: "sendTCPQueryError",
+            let errorReason;
+            if (e.message == "NetworkTimeoutError") {
+                errorReason = "tcpQueryTimeoutError";
+            } else {
+                errorReason = "sendTCPQueryError";
+            }
+            sendTelemetry({reason: errorReason,
                            errorRRTYPE: rrtype,
                            errorAttempt: dnsAttempts["tcp" + rrtype]});
         }

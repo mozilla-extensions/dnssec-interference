@@ -72,6 +72,12 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                 tcp_socket.onerror = ((event) => {
                                     reject(new ExtensionError(event.name));
                                 });
+
+                                tcp_socket.onclose ((event) => {
+                                    if (data.length < expectedLength) {
+                                        reject(new ExtensionErorr("Got too few bytes from TCP"));
+                                    }
+                                });
                             });
                             return responseBytes;
                         } finally {
