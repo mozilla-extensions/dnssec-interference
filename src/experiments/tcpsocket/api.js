@@ -39,9 +39,11 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                 });
 
                                 tcp_socket.onerror = ((event) => {
-                                    throw new ExtensionError(event.name);
+                                    reject(new ExtensionError(event.name));
                                 });
                             });
+
+
                             if (eventType != "open" || tcp_socket.readyState != "open") {
                                 throw new ExtensionError("TCP socket didn't properly open");
                             }
@@ -65,21 +67,19 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                     if (data.length == expectedLength + 2) {
                                         resolve(data);
                                     } else if (data.length > expectedLength + 2) {
-                                        throw new ExtensionError("Got too many bytes from TCP");
+                                        reject(new ExtensionError("Got too many bytes from TCP"));
                                     }
                                 });
 
                                 tcp_socket.onopen = ((event) => {
-                                    throw new ExtensionError("Got an additional open event");
+                                    reject(new ExtensionError("Got an additional open event"));
                                 });
 
                                 tcp_socket.onerror = ((event) => {
-                                    throw new ExtensionError(event.name);
+                                    reject(new ExtensionError(event.name));
                                 });
                             });
                             return responseBytes;
-                        } catch(e) {
-                            throw new ExtensionError(e.message);
                         } finally {
                             tcp_socket.close();
                         }

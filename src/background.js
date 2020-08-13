@@ -5172,7 +5172,7 @@ var _default = version;
 exports.default = _default;
 },{"./validate.js":25}],27:[function(require,module,exports){
 (function (Buffer){
-/* global browser */
+/* global browser, Buffer */
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 
@@ -5289,7 +5289,7 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 if (dnsData["udp" + rrtype].length == 0) {
                     dnsData["udp" + rrtype] = responseBytes;
                     const responseBuf = Buffer.from(responseBytes);
-                    decodedResponse = DNS_PACKET.decode(responseBuf);
+                    const decodedResponse = DNS_PACKET.decode(responseBuf);
                     console.log(rrtype + ": decoded UDP response");
                     console.log(decodedResponse);
                 }
@@ -5321,7 +5321,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             if (dnsData["tcp" + rrtype].length == 0) {
                 dnsData["tcp" + rrtype] = responseBytes;
                 const responseBuf = Buffer.from(responseBytes);
-                decodedResponse = DNS_PACKET.streamDecode(responseBuf);
+                const decodedResponse = DNS_PACKET.streamDecode(responseBuf);
                 console.log(rrtype + ": decoded TCP response");
                 console.log(decodedResponse);
             }
@@ -5383,12 +5383,6 @@ async function sendQueries(nameservers_ipv4) {
             await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype);
         }
     }
-
-    // Add the DNS responses as strings to an object, and send the object to telemetry
-    let payload = {reason: "measurementCompleted"};
-    payload.dnsData = dnsData;
-    payload.dnsAttempts = dnsAttempts;
-    sendTelemetry(payload);
 }
 
 /**
@@ -5415,8 +5409,11 @@ async function runMeasurement() {
     let nameservers_ipv4 = await readNameservers();
     await sendQueries(nameservers_ipv4);
 
-    // Send a ping to indicate the end of the measurement
-    sendTelemetry({reason: "end"});
+    // Mark the end of the measurement by sending the DNS responses to telemetry
+    let payload = {reason: "measurementCompleted"};
+    payload.dnsData = dnsData;
+    payload.dnsAttempts = dnsAttempts;
+    sendTelemetry(payload);
 }
 
 runMeasurement();
