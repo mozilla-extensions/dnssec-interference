@@ -1,4 +1,4 @@
-/* global browser */
+/* global browser, Buffer */
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 
@@ -115,7 +115,7 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 if (dnsData["udp" + rrtype].length == 0) {
                     dnsData["udp" + rrtype] = responseBytes;
                     const responseBuf = Buffer.from(responseBytes);
-                    decodedResponse = DNS_PACKET.decode(responseBuf);
+                    const decodedResponse = DNS_PACKET.decode(responseBuf);
                     console.log(rrtype + ": decoded UDP response");
                     console.log(decodedResponse);
                 }
@@ -147,7 +147,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             if (dnsData["tcp" + rrtype].length == 0) {
                 dnsData["tcp" + rrtype] = responseBytes;
                 const responseBuf = Buffer.from(responseBytes);
-                decodedResponse = DNS_PACKET.streamDecode(responseBuf);
+                const decodedResponse = DNS_PACKET.streamDecode(responseBuf);
                 console.log(rrtype + ": decoded TCP response");
                 console.log(decodedResponse);
             }
