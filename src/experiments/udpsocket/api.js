@@ -5,7 +5,10 @@
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
+const { setTimeout } = ChromeUtils.import("resource://gre/modules/Timer.jsm");
 const { EventManager} = ExtensionCommon;
+
+const RESOLVCONF_TIMEOUT = 5000; // Default timeout set by resolvconf for queries
 
 var udpsocket = class udpsocket extends ExtensionAPI {
     getAPI(context) {
@@ -53,6 +56,10 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                                 if (written != buf.length) {
                                     reject(new ExtensionError("UDP socket didn't write expected number of bytes"));
                                 }
+
+                                setTimeout(() => {
+                                    reject(new ExtensionError("UDP query timed out"));
+                                }, RESOLVCONF_TIMEOUT);
                             });
                             return responseBytes;
                         } finally {

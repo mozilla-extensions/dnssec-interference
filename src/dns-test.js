@@ -7,7 +7,6 @@ const SMIMEA_DOMAIN_NAME = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f
 const HTTPS_DOMAIN_NAME = "dnssec-experiment-moz.net";
 
 const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
-const RESOLVCONF_TIMEOUT = 5000; // 5 seconds
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
 const TELEMETRY_TYPE = "dnssec-study-v1";
@@ -109,7 +108,6 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
             try {
                 dnsAttempts["udp" + rrtype] += 1
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
-                // await sleep(RESOLVCONF_TIMEOUT);
 
                 // If we don't already have a response saved in dnsData, save this one
                 if (dnsData["udp" + rrtype].length == 0) {
