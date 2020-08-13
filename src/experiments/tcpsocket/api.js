@@ -28,9 +28,11 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                     async sendDNSQuery(addr, buf) {
                         let tcp_socket;
                         try {
-                            // Wait until the socket is open before sending data.
-                            // If we get an 'error' event before an 'open' event, 
-                            // throw an ExtensionError.
+                            /**
+                             * Wait until the socket is open before sending data.
+                             * If we get an 'error' event before an 'open' event, 
+                             * throw an ExtensionError.
+                             */
                             tcp_socket = new TCPSocket(addr, 53, { binaryType: "arraybuffer" });
                             let responseBytes = await new Promise((resolve, reject) => {
                                 let data = new Uint8Array();
@@ -55,8 +57,8 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
 
                                 tcp_socket.onopen = ((event) => {
                                     // After we know that the socket is open, send the bytes
-                                    tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
                                     tcp_socket.onopen = null;
+                                    tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
                                 });
 
                                 tcp_socket.onerror = ((event) => {
