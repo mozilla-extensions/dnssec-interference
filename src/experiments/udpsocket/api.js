@@ -17,9 +17,20 @@ var udpsocket = class udpsocket extends ExtensionAPI {
            * over a UDP socket
            */
           async sendDNSQuery(addr, buf, rrtype) {
-            let written;
+            let written = 0;
             let responseBytes = new Uint8Array();
             let socket = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
+            let closeHandler = {
+                close() {
+                    try {
+                        socket.close();
+                    } catch (e) {
+                        Cu.reportError(e);
+                    }
+                },
+            };
+            context.callOnClose(closeHandler);
+
             try {
                 // Initialize the UDP socket
                 socket.init2("0.0.0.0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
@@ -33,19 +44,20 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                             console.log(rrtype + " packet received");
                             resolve(aMessage.rawData);
                         },
-                        onStopListening(aSocket, aStatus) {}
+                        onStopListening(aSocket, aStatus) { 
+                            reject("Socket closed before reply received");
+                        }
                     }); 
                    
                     written = socket.send(addr, 53, buf);
                     if (written != buf.length) {
-                        throw new ExtensionError("UDP socket didn't write expected number of bytes");
+                        reject(new ExtensionError("UDP socket didn't write expected number of bytes"));
                     }
                 });
                 return responseBytes;
-            } catch(e) {
-                throw new ExtensionError(e.message);
             } finally {
-                socket.close();
+                context.forgetOnClose(closeHandler);
+                closeHandler.close();
             }
           },
         },

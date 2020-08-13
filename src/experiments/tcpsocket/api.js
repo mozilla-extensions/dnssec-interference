@@ -27,6 +27,17 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                      */
                     async sendDNSQuery(addr, buf) {
                         let tcp_socket;
+                        let closeHandler = {
+                          close() {
+                            try {
+                              tcp_socket.close();
+                            } catch (e) {
+                              Cu.reportError(e);
+                            }
+                          },
+                        };
+                        context.callOnClose(closeHandler);
+
                         try {
                             /**
                              * Wait until the socket is open before sending data.
@@ -67,7 +78,8 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                             });
                             return responseBytes;
                         } finally {
-                            tcp_socket.close();
+                            context.forgetOnClose(closeHandler);
+                            closeHandler.close();
                         }
                     }
                 },
