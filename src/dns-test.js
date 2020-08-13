@@ -123,10 +123,10 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 // We don't need to re-transmit.
                 return;
             } catch(e) {
+                console.log("DNSSEC Interference Study: " + e.message);
                 sendTelemetry({reason: "sendUDPQueryError",
                                errorRRTYPE: rrtype,
                                errorAttempt: dnsAttempts["udp" + rrtype]});
-                console.log("DNSSEC Interference Study: Failure while sending UDP query");
             }
         }
     }
@@ -155,7 +155,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             // We don't need to re-transmit.
             return;
         } catch (e) {
-            console.log("DNSSEC Interference Study: Failure while sending TCP query");
+            console.log("DNSSEC Interference Study: " + e.message);
             sendTelemetry({reason: "sendTCPQueryError",
                            errorRRTYPE: rrtype,
                            errorAttempt: dnsAttempts["tcp" + rrtype]});
@@ -187,7 +187,7 @@ async function readNameservers() {
 
     if (!nameservers.length) {
         sendTelemetry({reason: "noNameserversInFileError"});
-        throw new Error("No nameservers found in /etc/resolv.conf or registry");
+        throw new Error("DNSSEC Interference Study: No nameservers found");
     }
     return nameservers;
 }
@@ -226,7 +226,7 @@ function sendTelemetry(payload) {
         payload.measurement_id = measurement_id;
         browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
     } catch(e) {
-        console.log("DNSSEC Interference Study: Couldn't send telemetry for reason " + payload[reason]);
+        console.log("DNSSEC Interference Study: Couldn't send telemetry");
     }
 }
 
