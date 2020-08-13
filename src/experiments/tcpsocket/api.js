@@ -27,29 +27,11 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                      */
                     async sendDNSQuery(addr, buf) {
                         let tcp_socket;
-
                         try {
                             // Wait until the socket is open before sending data.
                             // If we get an 'error' event before an 'open' event, 
                             // throw an ExtensionError.
                             tcp_socket = new TCPSocket(addr, 53, { binaryType: "arraybuffer" });
-                            let eventType = await new Promise((resolve, reject) => {
-                                tcp_socket.onopen = ((event) => {
-                                    resolve(event.type);
-                                });
-
-                                tcp_socket.onerror = ((event) => {
-                                    reject(new ExtensionError(event.name));
-                                });
-                            });
-
-
-                            if (eventType != "open" || tcp_socket.readyState != "open") {
-                                throw new ExtensionError("TCP socket didn't properly open");
-                            }
-
-                            // After we know that the socket is open, send the bytes
-                            tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
                             let responseBytes = await new Promise((resolve, reject) => {
                                 let data = new Uint8Array();
                                 let expectedLength;
@@ -72,7 +54,9 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                 });
 
                                 tcp_socket.onopen = ((event) => {
-                                    reject(new ExtensionError("Got an additional open event"));
+                                    // After we know that the socket is open, send the bytes
+                                    tcp_socket.send(buf.buffer, buf.byteOffset, buf.byteLength);
+                                    tcp_socket.onopen = null;
                                 });
 
                                 tcp_socket.onerror = ((event) => {
