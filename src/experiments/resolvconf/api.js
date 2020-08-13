@@ -3,7 +3,6 @@
 /* global ChromeUtils, ExtensionAPI, Cc, Ci, */
 
 const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
-const { ExtensionCommon } = ChromeUtils.import("resource://gre/modules/ExtensionCommon.jsm");
 const { ExtensionUtils } = ChromeUtils.import(
   "resource://gre/modules/ExtensionUtils.jsm"
 );
@@ -55,8 +54,9 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         try {
                             key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
                             let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
-                            nameservers_registry = nameservers_registry.trim();
-                            nameservers_registry = nameservers_registry.match(/([0-9.]+)(\s|$)/g);
+                            nameservers = nameservers_registry
+                                          .trim()
+                                          .match(/([0-9.]+)(\s|$)/g);
                         } catch {
                             throw new ExtensionError("Couldn't read Windows registry that contains nameservers");
                         } finally {

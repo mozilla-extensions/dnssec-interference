@@ -1,6 +1,6 @@
 "use strict";
 /* exported tcpsocket */
-/* global ExtensionAPI, ChromeUtils, Cu */
+/* global ExtensionError, ExtensionAPI, ChromeUtils, Cu */
 
 const { TCPSocket } = Cu.getGlobalForObject(
     ChromeUtils.import("resource://gre/modules/Services.jsm")

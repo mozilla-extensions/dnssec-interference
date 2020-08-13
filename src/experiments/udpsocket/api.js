@@ -1,12 +1,11 @@
 "use strict";
 /* exported udpsocket */
-/* global Components, ChromeUtils, ExtensionCommon, ExtensionAPI */
+/* global Cu, Components, ChromeUtils, ExtensionError, ExtensionAPI */
 
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 const { setTimeout } = ChromeUtils.import("resource://gre/modules/Timer.jsm");
-const { EventManager} = ExtensionCommon;
 
 const RESOLVCONF_TIMEOUT = 5000; // Default timeout set by resolvconf for queries
 

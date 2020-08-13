@@ -27,5 +27,8 @@
     "build:finalize": "mv web-ext-artifacts/*.zip web-ext-artifacts/dnssec-interference-study.xpi",
     "clean": "rm -rf dist web-ext-artifacts",
     "test": "echo 'not implemented'"
+  },
+  "devDependencies": {
+    "eslint": "^7.6.0"
   }
 }
