@@ -18,7 +18,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
            */
           async sendDNSQuery(addr, buf, rrtype) {
             let written;
-            let responseBytes = [];
+            let responseBytes = new Uint8Array();
             let socket = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);
             try {
                 // Initialize the UDP socket
@@ -47,7 +47,6 @@ var udpsocket = class udpsocket extends ExtensionAPI {
             } finally {
                 socket.close();
             }
-            return responseBytes;
           },
         },
       },
