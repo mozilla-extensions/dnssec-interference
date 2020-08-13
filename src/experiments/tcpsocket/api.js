@@ -50,18 +50,15 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                 let expectedLength;
 
                                 tcp_socket.ondata = ((event) => {
-                                    if (data.length == 0) {
-                                        expectedLength = new DataView(event.data).getUint16(0);
-                                        let receivedData = new Uint8Array(event.data);
-                                        data = receivedData;
-                                    } else {
-                                        data = concatUint8Arrays(data, receivedData);
+                                    data = concatUint8Arrays(data, new Uint8Array(event.data));
+                                    if (data.length >= 2 && !expectedLength) {
+                                        expectedLength = new DataView(data.buffer).getUint16(0) + 2;
                                     }
 
                                     // Check if we have got all the expected data, or if we've got too much data
-                                    if (data.length == expectedLength + 2) {
+                                    if (data.length == expectedLength) {
                                         resolve(data);
-                                    } else if (data.length > expectedLength + 2) {
+                                    } else if (data.length > expectedLength) {
                                         reject(new ExtensionError("Got too many bytes from TCP"));
                                     }
                                 });
