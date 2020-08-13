@@ -103,19 +103,19 @@ function encodeTCPQuery(domain, rrtype) {
  * (5000 ms).
  */
 async function sendUDPQuery(domain, nameservers, rrtype) {
-    let buf = encodeUDPQuery(domain, rrtype);
+    const queryBuf = encodeUDPQuery(domain, rrtype);
     for (let nameserver of nameservers) {
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
             try {
                 dnsAttempts["udp" + rrtype] += 1
-                let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, buf, rrtype);
+                let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
                 // await sleep(RESOLVCONF_TIMEOUT);
 
                 // If we don't already have a response saved in dnsData, save this one
                 if (dnsData["udp" + rrtype].length == 0) {
                     dnsData["udp" + rrtype] = responseBytes;
-                    buf = Buffer.from(responseBytes);
-                    decodedResponse = DNS_PACKET.decode(buf);
+                    const responseBuf = Buffer.from(responseBytes);
+                    decodedResponse = DNS_PACKET.decode(responseBuf);
                     console.log(rrtype + ": decoded UDP response");
                     console.log(decodedResponse);
                 }
@@ -137,17 +137,17 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
  * fail to receive a response. We let TCP handle re-transmissions.
  */
 async function sendTCPQuery(domain, nameservers, rrtype) {
-    let buf = encodeTCPQuery(domain, rrtype);
+    const queryBuf = encodeTCPQuery(domain, rrtype);
     for (let nameserver of nameservers) {
         try {
             dnsAttempts["tcp" + rrtype] += 1;
-            let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, buf);
+            let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
 
             // If we don't already have a response saved in dnsData, save this one
             if (dnsData["tcp" + rrtype].length == 0) {
                 dnsData["tcp" + rrtype] = responseBytes;
-                buf = Buffer.from(responseBytes);
-                decodedResponse = DNS_PACKET.streamDecode(buf);
+                const responseBuf = Buffer.from(responseBytes);
+                decodedResponse = DNS_PACKET.streamDecode(responseBuf);
                 console.log(rrtype + ": decoded TCP response");
                 console.log(decodedResponse);
             }
