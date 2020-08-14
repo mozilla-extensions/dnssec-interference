@@ -12,6 +12,9 @@ const MAC_RESOLVCONF_PATH = "/etc/resolv.conf";
 const WIN_REGISTRY_TCPIP_PATH = "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters";
 const WIN_REGISTRY_NAMESERVER_KEY = "DhcpNameServer";
 
+const STUDY_ERROR_NAMESERVERS_FILE_MAC = "STUDY_ERROR_NAMESERVERS_FILE_MAC";
+const STUDY_ERROR_NAMESERVERS_FILE_WIN = "STUDY_ERROR_NAMESERVERS_FILE_WIN";
+
 var resolvconf = class resolvconf extends ExtensionAPI {
     getAPI(context) {
         return {
@@ -27,7 +30,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         try {
                             resolvconf_string = await OS.File.read(MAC_RESOLVCONF_PATH, { "encoding": "utf-8" });
                         } catch(e) {
-                            throw new ExtensionError("Couldn't read /etc/resolv.conf");
+                            throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_MAC);
                         }
 
                         let lines = resolvconf_string.split("\n");
@@ -58,7 +61,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                                           .trim()
                                           .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
                         } catch {
-                            throw new ExtensionError("Couldn't read Windows registry that contains nameservers");
+                            throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_WIN);
                         } finally {
                             key.close();
                         }

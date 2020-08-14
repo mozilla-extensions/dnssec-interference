@@ -9,6 +9,10 @@ const { setTimeout } = ChromeUtils.import("resource://gre/modules/Timer.jsm");
 
 const RESOLVCONF_TIMEOUT = 5000; // Default timeout set by resolvconf for queries
 
+const STUDY_ERROR_UDP_PREMATURE_CLOSE = "STUDY_ERROR_UDP_PREMATURE_CLOSE";
+const STUDY_ERROR_UDP_BYTES_WRITTEN = "STUDY_ERROR_UDP_BYTES_WRITTEN";
+const STUDY_ERROR_UDP_QUERY_TIMEOUT = "STUDY_ERROR_UDP_QUERY_TIMEOUT";
+
 var udpsocket = class udpsocket extends ExtensionAPI {
     getAPI(context) {
         return {
@@ -47,17 +51,17 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                                         resolve(aMessage.rawData);
                                     },
                                     onStopListening(aSocket, aStatus) { 
-                                        reject(new ExtensionError("Socket closed before reply received"));
+                                        reject(new ExtensionError(STUDY_ERROR_UDP_PREMATURE_CLOSE));
                                     }
                                 }); 
 
                                 written = socket.send(addr, 53, buf);
                                 if (written != buf.length) {
-                                    reject(new ExtensionError("UDP socket didn't write expected number of bytes"));
+                                    reject(new ExtensionError(STUDY_ERROR_UDP_BYTES_WRITTEN));
                                 }
 
                                 setTimeout(() => {
-                                    reject(new ExtensionError("UDP query timed out"));
+                                    reject(new ExtensionError(STUDY_ERROR_UDP_QUERY_TIMEOUT));
                                 }, RESOLVCONF_TIMEOUT);
                             });
                             return responseBytes;

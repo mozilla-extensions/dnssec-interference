@@ -5183,6 +5183,14 @@ const HTTPS_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
+const STUDY_START = "STUDY_START";
+const STUDY_MEASUREMENT_COMPLETED = "STUDY_MEASUREMENT_COMPLETED";
+const STUDY_ERROR_UDP_MISC = "STUDY_ERROR_UDP_MISC";
+const STUDY_ERROR_TCP_MISC = "STUDY_ERROR_TCP_MISC";
+const STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED = "STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED";
+const STUDY_ERROR_NAMESERVERS_NOT_FOUND = "STUDY_ERROR_NAMESERVERS_NOT_FOUND";
+const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
+
 const TELEMETRY_TYPE = "dnssec-study-v1";
 const TELEMETRY_OPTIONS = {
     addClientId: true,
@@ -5192,7 +5200,7 @@ const TELEMETRY_OPTIONS = {
 const MAX_TXID = 65535;
 const MIN_TXID = 0;
 
-var measurement_id;
+var measurementID;
 
 var dnsData = {
     udpA:      [],
@@ -5285,7 +5293,7 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
 
                 // If we don't already have a response saved in dnsData, save this one
                 if (dnsData["udp" + rrtype].length == 0) {
-                    dnsData["udp" + rrtype] = responseBytes;
+                    dnsData["udp" + rrtype] = Array.from(responseBytes);
                     const responseBuf = Buffer.from(responseBytes);
                     const decodedResponse = DNS_PACKET.decode(responseBuf);
                     console.log(rrtype + ": decoded UDP response");
@@ -5295,12 +5303,11 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 // We don't need to re-transmit.
                 return;
             } catch(e) {
-                console.log("DNSSEC Interference Study: " + e.message);
                 let errorReason;
-                if (e.message == "UDP query timed out") {
-                    errorReason = "udpQueryTimeoutError";
+                if (e.message.startsWith("STUDY_ERROR_UDP")) {
+                    errorReason = e.message;
                 } else {
-                    errorReason = "sendUDPQueryError";
+                    errorReason = STUDY_ERROR_UDP_MISC;
                 }
                 sendTelemetry({reason: errorReason,
                                errorRRTYPE: rrtype,
@@ -5323,7 +5330,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
 
             // If we don't already have a response saved in dnsData, save this one
             if (dnsData["tcp" + rrtype].length == 0) {
-                dnsData["tcp" + rrtype] = responseBytes;
+                dnsData["tcp" + rrtype] = Array.from(responseBytes);
                 const responseBuf = Buffer.from(responseBytes);
                 const decodedResponse = DNS_PACKET.streamDecode(responseBuf);
                 console.log(rrtype + ": decoded TCP response");
@@ -5333,12 +5340,11 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             // We don't need to re-transmit.
             return;
         } catch (e) {
-            console.log("DNSSEC Interference Study: " + e.message);
             let errorReason;
-            if (e.message == "NetworkTimeoutError") {
-                errorReason = "tcpQueryTimeoutError";
+            if (e.message.startsWith("STUDY_ERROR_TCP")) {
+                errorReason = e.message;
             } else {
-                errorReason = "sendTCPQueryError";
+                errorReason = STUDY_ERROR_TCP_MISC;
             }
             sendTelemetry({reason: errorReason,
                            errorRRTYPE: rrtype,
@@ -5361,17 +5367,22 @@ async function readNameservers() {
         } else if (platform.os == "win") {
             nameservers = await browser.experiments.resolvconf.readNameserversWin();
         } else {
-            sendTelemetry({reason: "osNotSupportedError"});
-            throw new Error("DNSSEC Interference Study: OS not supported");
+            throw new Error(STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED);
         }
     } catch(e) {
-        sendTelemetry({reason: "readNameserversFileError"});
-        throw e;
-    } 
+        let errorReason;
+        if (e.message.startsWith("STUDY_ERROR_NAMESERVERS")) {
+            errorReason = e.message;
+        } else {
+            errorReason = STUDY_ERROR_NAMESERVERS_MISC;
+        }
+        sendTelemetry({reason: errorReason});
+        throw new Error(errorReason);
+    }
 
     if (!nameservers.length) {
-        sendTelemetry({reason: "noNameserversInFileError"});
-        throw new Error("DNSSEC Interference Study: No nameservers found");
+        sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_NOT_FOUND});
+        throw new Error(STUDY_ERROR_NAMESERVERS_NOT_FOUND);
     }
     return nameservers;
 }
@@ -5396,12 +5407,13 @@ async function sendQueries(nameservers_ipv4) {
 }
 
 /**
- * Add an ID to telemetry that corresponds with this instance of our 
+ * Add an ID to telemetry that corresponds with this instance of our
  * measurement, i.e. a browser session
  */
 function sendTelemetry(payload) {
     try {
-        payload.measurement_id = measurement_id;
+        payload.measurementID = measurementID;
+        console.log(payload);
         browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
     } catch(e) {
         console.log("DNSSEC Interference Study: Couldn't send telemetry");
@@ -5413,14 +5425,14 @@ function sendTelemetry(payload) {
  */
 async function runMeasurement() {
     // Send a ping to indicate the start of the measurement
-    measurement_id = uuidv4();
-    sendTelemetry({reason: "startup"});
+    measurementID = uuidv4();
+    sendTelemetry({reason: STUDY_START});
 
     let nameservers_ipv4 = await readNameservers();
     await sendQueries(nameservers_ipv4);
 
     // Mark the end of the measurement by sending the DNS responses to telemetry
-    let payload = {reason: "measurementCompleted"};
+    let payload = {reason: STUDY_MEASUREMENT_COMPLETED};
     payload.dnsData = dnsData;
     payload.dnsAttempts = dnsAttempts;
     sendTelemetry(payload);

@@ -6,6 +6,12 @@ const { TCPSocket } = Cu.getGlobalForObject(
     ChromeUtils.import("resource://gre/modules/Services.jsm")
 );
 
+const STUDY_ERROR_TCP_NETWORK_TIMEOUT = "STUDY_ERROR_TCP_NETWORK_TIMEOUT";
+const STUDY_ERROR_TCP_NETWORK_MISC = "STUDY_ERROR_TCP_NETWORK_MISC";
+const STUDY_ERROR_TCP_CONNECTION_REFUSED = "STUDY_ERROR_TCP_CONNECTION_REFUSED";
+const STUDY_ERROR_TCP_NOT_ENOUGH_BYTES = "STUDY_ERROR_TCP_NOT_ENOUGH_BYTES"; 
+const STUDY_ERROR_TCP_TOO_MANY_BYTES = "STUDY_ERROR_TCP_TOO_MANY_BYTES";
+
 /**
  * Concatenate two Uint8Array objects
  */
@@ -59,7 +65,7 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                     if (data.length == expectedLength) {
                                         resolve(data);
                                     } else if (data.length > expectedLength) {
-                                        reject(new ExtensionError("Got too many bytes from TCP"));
+                                        reject(new ExtensionError(STUDY_ERROR_TCP_TOO_MANY_BYTES));
                                     }
                                 });
 
@@ -70,12 +76,18 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                 });
 
                                 tcp_socket.onerror = ((event) => {
-                                    reject(new ExtensionError(event.name));
+                                    if (event.name == "ConnectionRefusedError") {
+                                        reject(new ExtensionError(STUDY_ERROR_TCP_CONNECTION_REFUSED));
+                                    } else if (event.name == "NetworkTimeoutError") {
+                                        reject(new ExtensionError(STUDY_ERROR_TCP_NETWORK_TIMEOUT));
+                                    } else {
+                                        reject(new ExtensionError(STUDY_ERROR_TCP_NETWORK_MISC)); 
+                                    }
                                 });
 
                                 tcp_socket.onclose = ((event) => {
                                     if (data.length < expectedLength) {
-                                        reject(new ExtensionErorr("Got too few bytes from TCP"));
+                                        reject(new ExtensionError(STUDY_ERROR_TCP_NOT_ENOUGH_BYTES));
                                     }
                                 });
                             });
