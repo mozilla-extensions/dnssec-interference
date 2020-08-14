@@ -47,7 +47,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                                         resolve(aMessage.rawData);
                                     },
                                     onStopListening(aSocket, aStatus) { 
-                                        reject("Socket closed before reply received");
+                                        reject(new ExtensionError("Socket closed before reply received"));
                                     }
                                 }); 
 
