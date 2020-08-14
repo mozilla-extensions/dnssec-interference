@@ -56,7 +56,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                             let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
                             nameservers = nameservers_registry
                                           .trim()
-                                          .match(/([0-9.]+)(\s|$)/g);
+                                          .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
                         } catch {
                             throw new ExtensionError("Couldn't read Windows registry that contains nameservers");
                         } finally {
