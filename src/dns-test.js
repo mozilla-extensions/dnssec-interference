@@ -110,10 +110,10 @@ function encodeTCPQuery(domain, rrtype) {
  * (5000 ms).
  */
 async function sendUDPQuery(domain, nameservers, rrtype) {
-    const queryBuf = encodeUDPQuery(domain, rrtype);
-    for (let nameserver of nameservers) {
-        for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
-            try {
+    try {
+        const queryBuf = encodeUDPQuery(domain, rrtype);
+        for (let nameserver of nameservers) {
+            for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
                 dnsAttempts["udp" + rrtype] += 1
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
 
@@ -128,18 +128,18 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 // If we didn't get an error, return.
                 // We don't need to re-transmit.
                 return;
-            } catch(e) {
-                let errorReason;
-                if (e.message.startsWith("STUDY_ERROR_UDP")) {
-                    errorReason = e.message;
-                } else {
-                    errorReason = STUDY_ERROR_UDP_MISC;
-                }
-                sendTelemetry({reason: errorReason,
-                               errorRRTYPE: rrtype,
-                               errorAttempt: dnsAttempts["udp" + rrtype]});
             }
         }
+    } catch(e) {
+        let errorReason;
+        if (e.message.startsWith("STUDY_ERROR_UDP")) {
+            errorReason = e.message;
+        } else {
+            errorReason = STUDY_ERROR_UDP_MISC;
+        }
+        sendTelemetry({reason: errorReason,
+                       errorRRTYPE: rrtype,
+                       errorAttempt: dnsAttempts["udp" + rrtype]});
     }
 }
 
@@ -148,9 +148,9 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
  * fail to receive a response. We let TCP handle re-transmissions.
  */
 async function sendTCPQuery(domain, nameservers, rrtype) {
-    const queryBuf = encodeTCPQuery(domain, rrtype);
-    for (let nameserver of nameservers) {
-        try {
+    try {
+        const queryBuf = encodeTCPQuery(domain, rrtype);
+        for (let nameserver of nameservers) {
             dnsAttempts["tcp" + rrtype] += 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
 
@@ -165,17 +165,17 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             // If we didn't get an error, return.
             // We don't need to re-transmit.
             return;
-        } catch (e) {
-            let errorReason;
-            if (e.message.startsWith("STUDY_ERROR_TCP")) {
-                errorReason = e.message;
-            } else {
-                errorReason = STUDY_ERROR_TCP_MISC;
-            }
-            sendTelemetry({reason: errorReason,
-                           errorRRTYPE: rrtype,
-                           errorAttempt: dnsAttempts["tcp" + rrtype]});
         }
+    } catch (e) {
+        let errorReason;
+        if (e.message.startsWith("STUDY_ERROR_TCP")) {
+            errorReason = e.message;
+        } else {
+            errorReason = STUDY_ERROR_TCP_MISC;
+        }
+        sendTelemetry({reason: errorReason,
+                       errorRRTYPE: rrtype,
+                       errorAttempt: dnsAttempts["tcp" + rrtype]});
     }
 }
 
@@ -206,7 +206,7 @@ async function readNameservers() {
         throw new Error(errorReason);
     }
 
-    if (!nameservers.length) {
+    if (!(nameservers && nameservers.length)) {
         sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_NOT_FOUND});
         throw new Error(STUDY_ERROR_NAMESERVERS_NOT_FOUND);
     }
