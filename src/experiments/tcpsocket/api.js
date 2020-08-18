@@ -6,11 +6,18 @@ const { TCPSocket } = Cu.getGlobalForObject(
     ChromeUtils.import("resource://gre/modules/Services.jsm")
 );
 
+/**
+ * Long timeout just in case we don't receive enough data 
+ * but the socket doesn't close
+ */
+const LONG_TIMEOUT = 30000;
+
 const STUDY_ERROR_TCP_NETWORK_TIMEOUT = "STUDY_ERROR_TCP_NETWORK_TIMEOUT";
 const STUDY_ERROR_TCP_NETWORK_MISC = "STUDY_ERROR_TCP_NETWORK_MISC";
 const STUDY_ERROR_TCP_CONNECTION_REFUSED = "STUDY_ERROR_TCP_CONNECTION_REFUSED";
 const STUDY_ERROR_TCP_NOT_ENOUGH_BYTES = "STUDY_ERROR_TCP_NOT_ENOUGH_BYTES"; 
 const STUDY_ERROR_TCP_TOO_MANY_BYTES = "STUDY_ERROR_TCP_TOO_MANY_BYTES";
+const STUDY_ERROR_TCP_QUERY_TIMEOUT = "STUDY_ERROR_TCP_QUERY_TIMEOUT";
 
 /**
  * Concatenate two Uint8Array objects
@@ -90,6 +97,10 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
                                         reject(new ExtensionError(STUDY_ERROR_TCP_NOT_ENOUGH_BYTES));
                                     }
                                 });
+
+                                setTimeout(() => {
+                                    reject(new ExtensionError(STUDY_ERROR_TCP_QUERY_TIMEOUT));
+                                }, LONG_TIMEOUT);
                             });
                             return responseBytes;
                         } finally {
