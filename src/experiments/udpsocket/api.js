@@ -40,14 +40,12 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                         try {
                             // Initialize the UDP socket
                             socket.init2("0.0.0.0", -1, Services.scriptSecurityManager.getSystemPrincipal(), true);
-                            console.log(rrtype + " socket initialized on " + socket.localAddr.address + ":" + socket.port);
 
                             // Set up a Promise that resolves when we get a response on the UDP socket
                             responseBytes = await new Promise((resolve, reject) => {
                                 socket.asyncListen({
                                     QueryInterface: ChromeUtils.generateQI([Ci.nsIUDPSocketListener]),
                                     onPacketReceived(aSocket, aMessage) {
-                                        console.log(rrtype + " packet received");
                                         resolve(aMessage.rawData);
                                     },
                                     onStopListening(aSocket, aStatus) { 

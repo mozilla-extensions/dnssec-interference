@@ -5171,7 +5171,6 @@ function version(uuid) {
 var _default = version;
 exports.default = _default;
 },{"./validate.js":25}],27:[function(require,module,exports){
-(function (Buffer){
 /* global browser, Buffer */
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
@@ -5317,10 +5316,6 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 // If we don't already have a response saved in dnsData, save this one
                 if (dnsData["udp" + rrtype].length == 0) {
                     dnsData["udp" + rrtype] = Array.from(responseBytes);
-                    const responseBuf = Buffer.from(responseBytes);
-                    const decodedResponse = DNS_PACKET.decode(responseBuf);
-                    console.log(rrtype + ": decoded UDP response");
-                    console.log(decodedResponse);
                 }
                 // If we didn't get an error, return.
                 // We don't need to re-transmit.
@@ -5361,10 +5356,6 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             // If we don't already have a response saved in dnsData, save this one
             if (dnsData["tcp" + rrtype].length == 0) {
                 dnsData["tcp" + rrtype] = Array.from(responseBytes);
-                const responseBuf = Buffer.from(responseBytes);
-                const decodedResponse = DNS_PACKET.streamDecode(responseBuf);
-                console.log(rrtype + ": decoded TCP response");
-                console.log(decodedResponse);
             }
             // If we didn't get an error, return.
             // We don't need to re-transmit.
@@ -5444,10 +5435,12 @@ async function sendQueries(nameservers_ipv4) {
 function sendTelemetry(payload) {
     try {
         payload.measurementID = measurementID;
-        console.log(payload);
         browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
     } catch(e) {
-        console.log("DNSSEC Interference Study: Couldn't send telemetry");
+        /* *
+         * Do nothing; we just don't want the addon to error out. The pings 
+         * can be uploaded later when the Internet connection is restored.
+         */
     }
 }
 
@@ -5457,7 +5450,6 @@ function sendTelemetry(payload) {
 async function runMeasurement() {
     // If we can't upload telemetry. don't run the addon
     let canUpload = await browser.telemetry.canUpload();
-    console.log(canUpload)
     if (!canUpload) {
         return
     }
@@ -5478,5 +5470,4 @@ async function runMeasurement() {
 
 runMeasurement();
 
-}).call(this,require("buffer").Buffer)
-},{"buffer":2,"dns-packet":4,"uuid":12}]},{},[27]);
+},{"dns-packet":4,"uuid":12}]},{},[27]);
