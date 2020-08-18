@@ -43,7 +43,7 @@ containing the DNS responses takes the following form:
   "version": 4,
   "payload": {
     "measurementID": "e76962aa-a28f-4893-b3bf-fa2e33789e5d",
-    "reason": "measurementCompleted",
+    "reason": "STUDY_MEASUREMENT_END",
     "dnsData": {
       "udpA": [1, 2, 3],
       "tcpA": [1, 2, 3],
@@ -81,9 +81,7 @@ containing the DNS responses takes the following form:
 ```
 
 - We also send a ping at browser startup that simply indicates the beginning of 
-the experiment for a given browser session. Similarly, we send another ping 
-after the DNS response ping has been sent to indicate the end of the experiment 
-for a given browser session. These pings take the following form:
+the experiment for a given browser session. This ping takes the following form:
 
 ```
 {
@@ -96,7 +94,7 @@ for a given browser session. These pings take the following form:
   "version": 4,
   "payload": {
     "measurementID": "e76962aa-a28f-4893-b3bf-fa2e33789e5d",
-    "reason": ("startup", "end")
+    "reason": "STUDY_START"
   }
 }
 ```
@@ -116,9 +114,22 @@ sent. These pings take the following form:
   "version": 4,
   "payload": {
     "measurementID": "e76962aa-a28f-4893-b3bf-fa2e33789e5d",
-    "reason": ("readNameserversFileError", "noNameserversInFileError",
-    "noIPv4NameserversError", "openUDPSocketsError", "sendUDPQueryError",
-    "sendTCPQueryError", "osNotSupportedError")
+    "reason": ("readNameserversFileError", 
+               "STUDY_ERROR_UDP_MISC",
+               "STUDY_ERROR_UDP_ENCODE",
+               "STUDY_ERROR_UDP_PREMATURE_CLOSE",
+               "STUDY_ERROR_UDP_BYTES_WRITTEN",
+               "STUDY_ERROR_UDP_QUERY_TIMEOUT",
+               "STUDY_ERROR_TCP_MISC",
+               "STUDY_ERROR_TCP_ENCODE",
+               "STUDY_ERROR_TCP_NETWORK_TIMEOUT",
+               "STUDY_ERROR_TCP_NETWORK_MISC",
+               "STUDY_ERROR_TCP_CONNECTION_REFUSED",
+               "STUDY_ERROR_TCP_NOT_ENOUGH_BYTES",
+               "STUDY_ERROR_TCP_TOO_MANY_BYTES",
+               "STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED",
+               "STUDY_ERROR_NAMESERVERS_NOT_FOUND",
+               "STUDY_ERROR_NAMESERVERS_MISC")
   }
 }
 ```
