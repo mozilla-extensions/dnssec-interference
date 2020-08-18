@@ -5171,7 +5171,7 @@ function version(uuid) {
 var _default = version;
 exports.default = _default;
 },{"./validate.js":25}],27:[function(require,module,exports){
-/* global browser, Buffer */
+/* global browser */ 
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 
