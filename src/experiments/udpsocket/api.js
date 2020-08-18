@@ -22,7 +22,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                      * Send a DNS query stored in buf to a nameserver addresses by addr 
                      * over a UDP socket
                      */
-                    async sendDNSQuery(addr, buf, rrtype) {
+                    async sendDNSQuery(addr, buf) {
                         let written = 0;
                         let responseBytes = new Uint8Array();
                         let socket = Cc["@mozilla.org/network/udp-socket;1"].createInstance(Ci.nsIUDPSocket);

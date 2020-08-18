@@ -1,4 +1,4 @@
-/* global browser, Buffer */
+/* global browser */ 
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 
