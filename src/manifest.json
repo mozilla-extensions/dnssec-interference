@@ -4,7 +4,6 @@
     "description": "Mozilla addon that measures rates of DNSSEC interference by middleboxes",
     "version": "1.0.0",
     "hidden": true,
-    "private": true,
 
     "applications": {
         "gecko": {

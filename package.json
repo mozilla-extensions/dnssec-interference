@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "DNSSEC Interference Study",
   "main": "web-ext-config.js",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mozilla-extensions/dnssec-interference.git"
