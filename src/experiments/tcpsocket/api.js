@@ -10,7 +10,7 @@ const { TCPSocket } = Cu.getGlobalForObject(
  * Long timeout just in case we don't receive enough data 
  * but the socket doesn't close
  */
-const LONG_TIMEOUT = 30000;
+const LONG_TIMEOUT = 60000;
 
 const STUDY_ERROR_TCP_NETWORK_TIMEOUT = "STUDY_ERROR_TCP_NETWORK_TIMEOUT";
 const STUDY_ERROR_TCP_NETWORK_MISC = "STUDY_ERROR_TCP_NETWORK_MISC";
