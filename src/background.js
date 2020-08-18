@@ -5433,15 +5433,8 @@ async function sendQueries(nameservers_ipv4) {
  * measurement, i.e. a browser session
  */
 function sendTelemetry(payload) {
-    try {
-        payload.measurementID = measurementID;
-        browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
-    } catch(e) {
-        /* *
-         * Do nothing; we just don't want the addon to error out. The pings 
-         * can be uploaded later when the Internet connection is restored.
-         */
-    }
+    payload.measurementID = measurementID;
+    browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
 /**
