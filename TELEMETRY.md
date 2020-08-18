@@ -129,7 +129,9 @@ sent. These pings take the following form:
                "STUDY_ERROR_TCP_TOO_MANY_BYTES",
                "STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED",
                "STUDY_ERROR_NAMESERVERS_NOT_FOUND",
-               "STUDY_ERROR_NAMESERVERS_MISC")
+               "STUDY_ERROR_NAMESERVERS_MISC",
+               "STUDY_ERROR_NAMESERVERS_FILE_MAC",
+               "STUDY_ERROR_NAMESERVERS_FILE_WIN")
   }
 }
 ```
