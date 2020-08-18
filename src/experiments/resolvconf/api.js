@@ -1,6 +1,6 @@
 "use strict";
 /* exported resolvconf */
-/* global ChromeUtils, ExtensionAPI, Cc, Ci, */
+/* global ChromeUtils, ExtensionAPI, Cc, Ci, Cu */
 
 const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
 const { ExtensionUtils } = ChromeUtils.import(
@@ -49,21 +49,35 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                      */
                     async readNameserversWin() {
                         let nameservers = [];
-                        let rootKey = Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE;
-                        let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
-                            Ci.nsIWindowsRegKey
-                        );
+                        let nameservers_registry;
+                        let rootKey;
+                        let key;
+                        let closeHandler = {
+                          close() {
+                            try {
+                              key.close();
+                            } catch (e) {
+                              Cu.reportError(e);
+                            }
+                          },
+                        };
+                        context.callOnClose(closeHandler);
 
                         try {
+                            rootKey = Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE;
+                            key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
+                                Ci.nsIWindowsRegKey
+                            );
                             key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
-                            let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
+                            nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
                             nameservers = nameservers_registry
                                           .trim()
                                           .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
                         } catch {
                             throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_WIN);
                         } finally {
-                            key.close();
+                            context.forgetOnClose(closeHandler);
+                            closeHandler.close();
                         }
                         return nameservers;
                     }
