@@ -1,0 +1,31 @@
+[
+  {
+    "namespace": "experiments.udpsocket",
+    "description": "UDP Client Socket implementation",
+    "functions": [
+      {
+        "name": "sendDNSQuery",
+        "type": "function",
+        "description": "This method initializes a UDP socket.",
+        "parameters": [
+            {
+                "type": "string",
+                "name": "addr",
+                "description": "Address of DNS recursive resolver"
+            },
+            {
+                "type": "any",
+                "name": "buf",
+                "description": "DNS packet to send as a byte array"
+            },
+            {
+                "type": "string",
+                "name": "rrtype",
+                "description": "RR type that is being queried"
+            }
+        ],
+        "async": true 
+      }
+    ]
+  }
+]
