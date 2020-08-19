@@ -5320,8 +5320,8 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok) {
         key = "udp" + rrtype;
     }
 
-    for (let nameserver of nameservers) {
-        for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
+    for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
+        for (let nameserver of nameservers) {
             try {
                 dnsAttempts[key] += 1
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
