@@ -18,7 +18,7 @@ To understand the extent to which network middleboxes between clients and recurs
 - How does the rate of DNSSEC interference compare to interference with other relatively new record types, such as SMIMEA and HTTPS?
 - Are there certain populations of clients or networks for which interference occurs more often?
 
-At a high-level, we will first serve the above record types from domain names in a zone that we control (`\*.dnssec-experiment-moz.net`). We will then induce Firefox clients to request the following record types from domain names in our zone:
+At a high-level, we will first serve the above record types from domain names in a zone that we control (`*.dnssec-experiment-moz.net`). We will then induce Firefox clients to request the following record types from domain names in our zone:
 
 - A
 - RRSIG
