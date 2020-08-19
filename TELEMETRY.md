@@ -85,7 +85,7 @@ containing the DNS responses takes the following form:
 ```
 
 - We also send a ping at browser startup that simply indicates the beginning of 
-the experiment for a given browser session. This ping takes the following form:
+the experiment for a given browser session. An example ping takes the following form:
 
 ```
 {
@@ -136,7 +136,9 @@ sent. These pings take the following form:
                "STUDY_ERROR_NAMESERVERS_NOT_FOUND",
                "STUDY_ERROR_NAMESERVERS_MISC",
                "STUDY_ERROR_NAMESERVERS_FILE_MAC",
-               "STUDY_ERROR_NAMESERVERS_FILE_WIN")
+               "STUDY_ERROR_NAMESERVERS_FILE_WIN"), // One of these values
+    "errorAttempt": 1,
+    "errorRRTYPE": "A"
   }
 }
 ```
