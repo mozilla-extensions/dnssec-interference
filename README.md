@@ -3,8 +3,8 @@ rates of DNSSEC interference by network middleboxes. The entry point for the
 addon is `src/dns-test.js`, which is converted into `background.js` at addon 
 build time through [browserify](https://browserify.org/). The experimental APIs 
 that are necessary for opening UDP/TCP sockets and reading which nameservers a 
-client is using are located in `src/experiments`. The addon also uses a modified
-form of the [dns-packet](https://github.com/mozilla/dns-packet) Node.js module, 
+client is using are located in `src/experiments`. The addon also uses a [modified
+form](https://github.com/mozilla/dns-packet) of the [dns-packet](https://github.com/mafintosh/dns-packet) Node.js module, 
 which enables us to send queries for SMIMEA records, HTTPS records, and two new 
 record types we created that are not standardized.
 
