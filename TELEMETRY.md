@@ -19,7 +19,7 @@ will be sent for that client.
 names in a zone that we control (\*.dnssec-experiment-moz.net). We request seven different resource record types, 
 re-transmitting if necessary: 
 
-  - A
+  - A (with and without the DNSSEC OK bit set)
   - RRSIG
   - DNSKEY
   - SMIMEA
@@ -47,6 +47,8 @@ containing the DNS responses takes the following form:
     "dnsData": {
       "udpA": [1, 2, 3],
       "tcpA": [1, 2, 3],
+      "udpADO": [1, 2, 3],
+      "tcpADO": [1, 2, 3],
       "udpRRSIG": [1, 2, 3],
       "tcpRRSIG": [1, 2, 3],
       "udpDNSKEY": [1, 2, 3],
@@ -63,6 +65,8 @@ containing the DNS responses takes the following form:
     "dnsAttempts": {
       "udpA": 1,
       "tcpA": 1,
+      "udpADO": 1,
+      "tcpADO": 1,
       "udpRRSIG": 1,
       "tcpRRSIG": 1,
       "udpDNSKEY": 1,
