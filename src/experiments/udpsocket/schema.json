@@ -2,28 +2,7 @@
   {
     "namespace": "experiments.udpsocket",
     "description": "UDP Client Socket implementation",
-    "events": [
-        {
-            "name": "onDNSResponseReceived",
-            "type": "function",
-            "description": "Description of the event",
-            "parameters": [
-                {
-                    "name": "responseBytes",
-                    "type": "any",
-                    "description": "DNS response packet in bytes"
-                }
-            ]
-        }
-    ],
     "functions": [
-      {
-        "name": "openSocket",
-        "type": "function",
-        "description": "This method initializes a UDP socket.",
-        "parameters": [],
-        "async": true
-      },
       {
         "name": "sendDNSQuery",
         "type": "function",
