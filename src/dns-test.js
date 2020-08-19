@@ -28,10 +28,13 @@ const TELEMETRY_OPTIONS = {
 const MAX_TXID = 65535;
 const MIN_TXID = 0;
 
+const UDP_PAYLOAD_SIZE = 4096;
+
 var measurementID;
 
 var dnsData = {
     udpA:      [],
+    udpADO:    [],
     udpRRSIG:  [],
     udpDNSKEY: [],
     udpSMIMEA: [],
@@ -39,6 +42,7 @@ var dnsData = {
     udpNEWONE: [],
     udpNEWTWO: [],
     tcpA:      [],
+    tcpADO:    [],
     tcpRRSIG:  [],
     tcpDNSKEY: [],
     tcpSMIMEA: [],
@@ -49,6 +53,7 @@ var dnsData = {
 
 var dnsAttempts = {
     udpA:      0,
+    udpADO:    0,
     udpRRSIG:  0,
     udpDNSKEY: 0,
     udpSMIMEA: 0,
@@ -56,6 +61,7 @@ var dnsAttempts = {
     udpNEWONE: 0,
     udpNEWTWO: 0,
     tcpA:      0,
+    tcpADO:    0,
     tcpRRSIG:  0,
     tcpDNSKEY: 0,
     tcpSMIMEA: 0,
@@ -67,16 +73,16 @@ var dnsAttempts = {
 /**
  * Encode a DNS query to be sent over a UDP socket
  */
-function encodeUDPQuery(domain, rrtype) {
+function encodeUDPQuery(domain, rrtype, dnssec_ok) {
     let buf;
-    if (rrtype == "A") {
+    if (dnssec_ok) {
         buf = DNS_PACKET.encode({
             type: 'query',
             // Generate a random transaction ID between 0 and 65535
             id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
             flags: DNS_PACKET.RECURSION_DESIRED,
             questions: [{ type: rrtype, name: domain }],
-            additionals: [{ type: 'OPT', name: '.', udpPayloadSize: 4096, flags: DNS_PACKET.DNSSEC_OK }]
+            additionals: [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE, flags: DNS_PACKET.DNSSEC_OK }]
         });
     } else {
         buf = DNS_PACKET.encode({
@@ -85,7 +91,7 @@ function encodeUDPQuery(domain, rrtype) {
             id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
             flags: DNS_PACKET.RECURSION_DESIRED,
             questions: [{ type: rrtype, name: domain }],
-            additionals: [{ type: 'OPT', name: '.', udpPayloadSize: 4096 }]
+            additionals: [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE }]
         });
     }
     return buf
@@ -94,9 +100,9 @@ function encodeUDPQuery(domain, rrtype) {
 /**
  * Encode a DNS query to be sent over a TCP socket
  */
-function encodeTCPQuery(domain, rrtype) {
+function encodeTCPQuery(domain, rrtype, dnssec_ok) {
     let buf;
-    if (rrtype == "A") {
+    if (dnssec_ok) {
         buf = DNS_PACKET.streamEncode({
             type: 'query',
             // Generate a random transaction ID between 0 and 65535
@@ -125,24 +131,31 @@ function encodeTCPQuery(domain, rrtype) {
  * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT 
  * (5000 ms).
  */
-async function sendUDPQuery(domain, nameservers, rrtype) {
+async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok) {
     let queryBuf;
     try {
-        queryBuf = encodeUDPQuery(domain, rrtype);
+        queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_UDP_ENCODE});
         throw new Error(STUDY_ERROR_UDP_ENCODE);
     }
 
+    let key;
+    if (dnssec_ok) {
+        key = "udp" + rrtype + "DO"; 
+    } else {
+        key = "udp" + rrtype;
+    }
+
     for (let nameserver of nameservers) {
         for (let j = 1; j <= RESOLVCONF_ATTEMPTS; j++) {
             try {
-                dnsAttempts["udp" + rrtype] += 1
+                dnsAttempts[key] += 1
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
 
                 // If we don't already have a response saved in dnsData, save this one
-                if (dnsData["udp" + rrtype].length == 0) {
-                    dnsData["udp" + rrtype] = Array.from(responseBytes);
+                if (dnsData[key].length == 0) {
+                    dnsData[key] = Array.from(responseBytes);
                 }
                 // If we didn't get an error, return.
                 // We don't need to re-transmit.
@@ -156,7 +169,7 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
                 }
                 sendTelemetry({reason: errorReason,
                                errorRRTYPE: rrtype,
-                               errorAttempt: dnsAttempts["udp" + rrtype]});
+                               errorAttempt: dnsAttempts[key]});
             }
         }
     }
@@ -166,23 +179,30 @@ async function sendUDPQuery(domain, nameservers, rrtype) {
  * Send a DNS query over TCP, re-transmitting to another nameserver if we 
  * fail to receive a response. We let TCP handle re-transmissions.
  */
-async function sendTCPQuery(domain, nameservers, rrtype) {
+async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok) {
     let queryBuf;
     try {
-        queryBuf = encodeTCPQuery(domain, rrtype);
+        queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_TCP_ENCODE});
         throw new Error(STUDY_ERROR_TCP_ENCODE);
     }
 
+    let key;
+    if (dnssec_ok) {
+        key = "tcp" + rrtype + "DO"; 
+    } else {
+        key = "tcp" + rrtype;
+    }
+
     for (let nameserver of nameservers) {
         try {
-            dnsAttempts["tcp" + rrtype] += 1;
+            dnsAttempts[key] += 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
 
             // If we don't already have a response saved in dnsData, save this one
-            if (dnsData["tcp" + rrtype].length == 0) {
-                dnsData["tcp" + rrtype] = Array.from(responseBytes);
+            if (dnsData[key].length == 0) {
+                dnsData[key] = Array.from(responseBytes);
             }
             // If we didn't get an error, return.
             // We don't need to re-transmit.
@@ -196,7 +216,7 @@ async function sendTCPQuery(domain, nameservers, rrtype) {
             }
             sendTelemetry({reason: errorReason,
                            errorRRTYPE: rrtype,
-                           errorAttempt: dnsAttempts["tcp" + rrtype]});
+                           errorAttempt: dnsAttempts[key]});
 
         }
     }
@@ -243,14 +263,20 @@ async function readNameservers() {
 async function sendQueries(nameservers_ipv4) {
     for (let rrtype of RRTYPES) {
         if (rrtype == 'SMIMEA') {
-            await sendUDPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
-            await sendTCPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendUDPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
+            await sendTCPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         } else if (rrtype == 'HTTPS') {
-            await sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype);
-            await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
+            await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
+        } else if (rrtype == 'A') {
+            // First send queries with the DNSSEC OK bit, then without
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         } else {
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype);
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         }
     }
 }
