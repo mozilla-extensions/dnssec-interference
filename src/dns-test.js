@@ -141,10 +141,13 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok) {
     }
 
     let key;
+    let errorKey;
     if (dnssec_ok) {
         key = "udp" + rrtype + "DO"; 
+        errorKey = rrtype + "DO";
     } else {
         key = "udp" + rrtype;
+        errorKey = rrtype;
     }
 
     for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
@@ -168,7 +171,7 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok) {
                     errorReason = STUDY_ERROR_UDP_MISC;
                 }
                 sendTelemetry({reason: errorReason,
-                               errorRRTYPE: rrtype,
+                               errorRRTYPE: errorKey,
                                errorAttempt: dnsAttempts[key]});
             }
         }
@@ -189,10 +192,13 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok) {
     }
 
     let key;
+    let errorKey;
     if (dnssec_ok) {
         key = "tcp" + rrtype + "DO"; 
+        errorKey = rrtype + "DO";
     } else {
         key = "tcp" + rrtype;
+        errorKey = rrtype;
     }
 
     for (let nameserver of nameservers) {
@@ -215,7 +221,7 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok) {
                 errorReason = STUDY_ERROR_TCP_MISC;
             }
             sendTelemetry({reason: errorReason,
-                           errorRRTYPE: rrtype,
+                           errorRRTYPE: errorKey,
                            errorAttempt: dnsAttempts[key]});
 
         }
