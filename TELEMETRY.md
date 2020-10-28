@@ -29,8 +29,12 @@ re-transmitting if necessary:
 
 - We wait for the DNS 
 responses and then encapsulate the raw bytes into a ping, excluding any IP or UDP headers. For each 
-record type, we also record how many times we attempted to query the record type. An example ping
-containing the DNS responses takes the following form:
+record type, we also record how many times we attempted to query the record type.
+
+- We also collect application and environment data about Firefox clients, as provided by the
+[browser.telemetry.submitPing()](https://firefox-source-docs.mozilla.org/toolkit/components/telemetry/collection/webextension-api.html) API. Example environment data includes browser version, operating system, and active addons.
+
+- An example ping containing the DNS responses takes the following form:
 
 ```
 {
