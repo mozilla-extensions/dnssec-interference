@@ -2,7 +2,7 @@
 
 const defaultConfig = {
   sourceDir: "./src/",
-  ignoreFiles: [".DS_Store"],
+  ignoreFiles: [".DS_Store", "dns-test.js"],
   build: {
     overwriteDest: true,
   }
