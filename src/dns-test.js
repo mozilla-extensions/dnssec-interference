@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
-const HTTPS_DOMAIN_NAME = "dnssec-experiment-moz.net";
+const HTTPS_DOMAIN_NAME = "httpssvc.dnssec-experiment-moz.net";
 
 const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
