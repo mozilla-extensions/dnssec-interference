@@ -122,8 +122,7 @@ sent. These pings take the following form:
   "version": 4,
   "payload": {
     "measurementID": "e76962aa-a28f-4893-b3bf-fa2e33789e5d",
-    "reason": ("readNameserversFileError", 
-               "STUDY_ERROR_UDP_MISC",
+    "reason": ("STUDY_ERROR_UDP_MISC",
                "STUDY_ERROR_UDP_ENCODE",
                "STUDY_ERROR_UDP_PREMATURE_CLOSE",
                "STUDY_ERROR_UDP_BYTES_WRITTEN",
