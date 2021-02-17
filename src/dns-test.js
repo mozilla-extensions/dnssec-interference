@@ -342,6 +342,25 @@ async function runMeasurement() {
         return
     }
 
+    try {
+        // If the network interfaces aren't active , don't run the addon
+         if (!navigator.onLine) {
+             console.log("Client is not online")
+             return
+         }
+        // If the client isn't connected to the Internet, don't run the addon
+        let online = await browser.experiments.netstatus.checkOnlineStatus();
+        if (!online) {
+            console.log("Client is not online")
+            return
+        }
+        console.log("Client is online")
+    } catch(e) {
+        console.log("Error checking online status") 
+        console.log(e)
+        return 
+    }
+
     // Send a ping to indicate the start of the measurement
     measurementID = uuidv4();
     sendTelemetry({reason: STUDY_START});

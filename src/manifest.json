@@ -44,6 +44,14 @@
                 "paths": [["experiments", "resolvconf"]],
                 "script": "experiments/resolvconf/api.js"
             }
+        },
+        "netstatus": {
+            "schema": "experiments/netstatus/schema.json",
+            "parent": {
+                "scopes": ["addon_parent"],
+                "paths": [["experiments", "netstatus"]],
+                "script": "experiments/netstatus/api.js"
+            }
         }
     }
 }
