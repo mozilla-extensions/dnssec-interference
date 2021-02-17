@@ -12,7 +12,8 @@
     },
 
     "permissions": [
-        "telemetry"
+        "telemetry",
+        "dns"
     ],
 
     "background": {

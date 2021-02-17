@@ -33,41 +33,43 @@ const UDP_PAYLOAD_SIZE = 4096;
 var measurementID;
 
 var dnsData = {
-    udpA:      [],
-    udpADO:    [],
-    udpRRSIG:  [],
-    udpDNSKEY: [],
-    udpSMIMEA: [],
-    udpHTTPS:  [],
-    udpNEWONE: [],
-    udpNEWTWO: [],
-    tcpA:      [],
-    tcpADO:    [],
-    tcpRRSIG:  [],
-    tcpDNSKEY: [],
-    tcpSMIMEA: [],
-    tcpHTTPS:  [],
-    tcpNEWONE: [],
-    tcpNEWTWO: []
+    udpAWebExt:   [],
+    udpA:         [],
+    udpADO:       [],
+    udpRRSIG:     [],
+    udpDNSKEY:    [],
+    udpSMIMEA:    [],
+    udpHTTPS:     [],
+    udpNEWONE:    [],
+    udpNEWTWO:    [],
+    tcpA:         [],
+    tcpADO:       [],
+    tcpRRSIG:     [],
+    tcpDNSKEY:    [],
+    tcpSMIMEA:    [],
+    tcpHTTPS:     [],
+    tcpNEWONE:    [],
+    tcpNEWTWO:    []
 };
 
 var dnsAttempts = {
-    udpA:      0,
-    udpADO:    0,
-    udpRRSIG:  0,
-    udpDNSKEY: 0,
-    udpSMIMEA: 0,
-    udpHTTPS:  0,
-    udpNEWONE: 0,
-    udpNEWTWO: 0,
-    tcpA:      0,
-    tcpADO:    0,
-    tcpRRSIG:  0,
-    tcpDNSKEY: 0,
-    tcpSMIMEA: 0,
-    tcpHTTPS:  0,
-    tcpNEWONE: 0,
-    tcpNEWTWO: 0 
+    udpAWebExt: 0,
+    udpA:       0,
+    udpADO:     0,
+    udpRRSIG:   0,
+    udpDNSKEY:  0,
+    udpSMIMEA:  0,
+    udpHTTPS:   0,
+    udpNEWONE:  0,
+    udpNEWTWO:  0,
+    tcpA:       0,
+    tcpADO:     0,
+    tcpRRSIG:   0,
+    tcpDNSKEY:  0,
+    tcpSMIMEA:  0,
+    tcpHTTPS:   0,
+    tcpNEWONE:  0,
+    tcpNEWTWO:  0
 };
 
 /**
@@ -121,6 +123,37 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok) {
         });
     }
     return buf;
+}
+
+/**
+ * Send a DNS query over UDP using the WebExtensions dns.resolve API, 
+ * re-transmitting according to default resolvconf behavior if the API 
+ * returns an error.
+ *
+ * We re-transmit at most RESOLVCONF_ATTEMPTS. We let the 
+ * underlying API handle which nameserver is used. We make that DoH is not 
+ * used and that A records are queried, rather than AAAA.
+ */
+async function sendUDPWebExtQuery(domain) {
+    let key = "udpAWebExt";
+    let errorKey = "AWebExt";
+    let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
+    for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
+        try {
+            dnsAttempts[key] += 1
+            let response = await browser.dns.resolve(domain, flags);
+            // If we don't already have a response saved in dnsData, save this one
+            if (dnsData[key].length == 0) {
+                dnsData[key] = response.addresses;
+            }
+            return;
+        } catch(e) {
+            let errorReason = "STUDY_ERROR_UDP_WEBEXT";
+            sendTelemetry({reason: errorReason,
+                           errorRRTYPE: errorKey,
+                           errorAttempt: dnsAttempts[key]});
+        }
+    }
 }
 
 /**
@@ -275,7 +308,10 @@ async function sendQueries(nameservers_ipv4) {
             await sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
             await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         } else if (rrtype == 'A') {
-            // First send queries with the DNSSEC OK bit, then without
+            // First send queries using the WebExtensions dns.resolve API as a baseline
+            await sendUDPWebExtQuery(APEX_DOMAIN_NAME);
+
+            // Then send queries using our experimental APIs with the DNSSEC OK bit, then without
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
             await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
