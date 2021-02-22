@@ -1,6 +1,7 @@
 /* global browser */ 
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
+const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
@@ -17,6 +18,7 @@ const STUDY_ERROR_UDP_ENCODE = "STUDY_ERROR_UDP_ENCODE";
 const STUDY_ERROR_TCP_ENCODE = "STUDY_ERROR_TCP_ENCODE";
 const STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED = "STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED";
 const STUDY_ERROR_NAMESERVERS_NOT_FOUND = "STUDY_ERROR_NAMESERVERS_NOT_FOUND";
+const STUDY_ERROR_NAMESERVERS_INVALID = "STUDY_ERROR_NAMESERVERS_INVALID";
 const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
 
 const TELEMETRY_TYPE = "dnssec-study-v1";
@@ -292,6 +294,13 @@ async function readNameservers() {
         sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_NOT_FOUND});
         throw new Error(STUDY_ERROR_NAMESERVERS_NOT_FOUND);
     }
+
+    for (let nameserver of nameservers) {
+        let valid = IP_REGEX({exact: true}).test(nameserver);
+        if (!valid) {
+            throw new Error(STUDY_ERROR_NAMESERVERS_INVALID);
+        }
+    }
     return nameservers;
 }
 
@@ -346,7 +355,6 @@ async function runMeasurement(details) {
         (captiveStatus !== "clear")) {
         return;
     }
-
 
     // Send a ping to indicate the start of the measurement
     measurementID = uuidv4();
