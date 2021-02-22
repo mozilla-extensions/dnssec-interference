@@ -335,31 +335,18 @@ function sendTelemetry(payload) {
 /**
  * Entry point for our measurements.
  */
-async function runMeasurement() {
-    // If we can't upload telemetry. don't run the addon
-    let canUpload = await browser.telemetry.canUpload();
-    if (!canUpload) {
-        return
+async function runMeasurement(details) {
+    // Now that we're here, stop listening to the captive portal
+    browser.captivePortal.onConnectivityAvailable.removeListener(runMeasurement);
+
+    // Only proceed if we're not behind a captive portal
+    let captiveStatus = details.status;
+    if ((captiveStatus !== "unlocked_portal") &&
+        (captiveStatus !== "not_captive") &&
+        (captiveStatus !== "clear")) {
+        return;
     }
 
-    try {
-        // If the network interfaces aren't active , don't run the addon
-         if (!navigator.onLine) {
-             console.log("Client is not online")
-             return
-         }
-        // If the client isn't connected to the Internet, don't run the addon
-        let online = await browser.experiments.netstatus.checkOnlineStatus();
-        if (!online) {
-            console.log("Client is not online")
-            return
-        }
-        console.log("Client is online")
-    } catch(e) {
-        console.log("Error checking online status") 
-        console.log(e)
-        return 
-    }
 
     // Send a ping to indicate the start of the measurement
     measurementID = uuidv4();
@@ -375,4 +362,28 @@ async function runMeasurement() {
     sendTelemetry(payload);
 }
 
-runMeasurement();
+/**
+ * Entry point for our addon.
+ */
+async function main() {
+    // If we can't upload telemetry. don't run the addon
+    let canUpload = await browser.telemetry.canUpload();
+    if (!canUpload) {
+        return;
+    }
+
+    // Use the captive portal API to determine if we have Internet connectivity.
+    // If we already have connectivity, run the measurement.
+    // If not, wait until we get connectivity to run it.
+    let captiveStatus = await browser.captivePortal.getState();
+    if ((captiveStatus === "unlocked_portal") ||
+        (captiveStatus === "not_captive") ||
+        (captiveStatus === "clear")) {
+        await runMeasurement({status: captiveStatus});
+        return;
+    }
+
+    browser.captivePortal.onConnectivityAvailable.addListener(runMeasurement);
+}
+
+main();
