@@ -10,7 +10,9 @@ const { ExtensionError } = ExtensionUtils;
 
 const MAC_RESOLVCONF_PATH = "/etc/resolv.conf";
 const WIN_REGISTRY_TCPIP_PATH = "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters";
-const WIN_REGISTRY_NAMESERVER_KEY = "DhcpNameServer";
+const WIN_REGISTRY_TCPIP_IF_PATH = "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces";
+const WIN_REGISTRY_DHCP_NAMESERVER_KEY = "DhcpNameServer";
+const WIN_REGISTRY_NAMESERVER_KEY = "NameServer";
 
 const STUDY_ERROR_NAMESERVERS_FILE_MAC = "STUDY_ERROR_NAMESERVERS_FILE_MAC";
 const STUDY_ERROR_NAMESERVERS_FILE_WIN = "STUDY_ERROR_NAMESERVERS_FILE_WIN";
@@ -56,15 +58,29 @@ var resolvconf = class resolvconf extends ExtensionAPI {
 
                         try {
                             key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
-                            let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
-                            nameservers = nameservers_registry
-                                          .trim()
-                                          .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+                            let registry_dhcp_nameserver = key.readStringValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY);
+                            let registry_nameserver = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
+                            registry_dhcp_nameserver = registry_dhcp_nameserver
+                                                       .trim()
+                                                       .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+                            registry_nameserver      = registry_nameserver
+                                                       .trim()
+                                                       .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+
+                            if (registry_dhcp_nameserver && registry_dhcp_nameserver.length) {
+                                nameservers = nameservers.concat(registry_dhcp_nameserver);
+                            }
+                            if (registry_nameserver && registry_nameserver.length) {
+                                nameservers = nameservers.concat(registry_nameserver);
+                            }
                         } catch {
                             throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_WIN);
                         } finally {
                             key.close();
                         }
+
+                        console.log(nameservers);
+                        nameservers = nameservers.filter((x, i, a) => a.indexOf(x) == i);
                         return nameservers;
                     }
                 }
