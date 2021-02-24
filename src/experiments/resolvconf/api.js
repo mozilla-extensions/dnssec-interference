@@ -55,32 +55,61 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
                             Ci.nsIWindowsRegKey
                         );
+                        let key_if = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
+                            Ci.nsIWindowsRegKey
+                        );
 
                         try {
+                            // Parse top-level registry
                             key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
-                            let registry_dhcp_nameserver = key.readStringValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY);
-                            let registry_nameserver = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
-                            registry_dhcp_nameserver = registry_dhcp_nameserver
-                                                       .trim()
-                                                       .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
-                            registry_nameserver      = registry_nameserver
-                                                       .trim()
-                                                       .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+                            let parentRegistryNameservers = await this.parseRegistry(key);
+                            nameservers = nameservers.concat(parentRegistryNameservers);
 
-                            if (registry_dhcp_nameserver && registry_dhcp_nameserver.length) {
-                                nameservers = nameservers.concat(registry_dhcp_nameserver);
+                            // Parse per-interface registries
+                            key_if.open(rootKey, WIN_REGISTRY_TCPIP_IF_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
+                            let childCount = key_if.childCount;
+                            for (let i = 0; i < childCount; i++) {
+                                let childName = key_if.getChildName(i);
+                                let childKey = key_if.openChild(childName, Ci.nsIWindowsRegKey.ACCESS_READ);
+                                let childRegistryNameservers = await this.parseRegistry(childKey);
+                                nameservers = nameservers.concat(childRegistryNameservers);
                             }
-                            if (registry_nameserver && registry_nameserver.length) {
-                                nameservers = nameservers.concat(registry_nameserver);
-                            }
-                        } catch {
+                        } catch(e) {
                             throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_WIN);
                         } finally {
                             key.close();
+                            key_if.close();
                         }
 
-                        console.log(nameservers);
+                        // Only consider unique nameservers
                         nameservers = nameservers.filter((x, i, a) => a.indexOf(x) == i);
+                        console.log("Unique nameservers found on Windows: " + nameservers);
+                        return nameservers;
+                    },
+
+                    async parseRegistry(key) {
+                        let nameservers = [];
+                        let registry_dhcp_nameserver = [];
+                        let registry_nameserver = [];
+                        if (key.hasValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY)) {
+                            let registry_dhcp_nameserver_str = key.readStringValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY);
+                            registry_dhcp_nameserver         = registry_dhcp_nameserver_str
+                                                               .trim()
+                                                               .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+                        }
+                        if (key.hasValue(WIN_REGISTRY_NAMESERVER_KEY)) {
+                            let registry_nameserver_str = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
+                            registry_nameserver         = registry_nameserver_str
+                                                          .trim()
+                                                          .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+                        }
+
+                        if (registry_dhcp_nameserver && registry_dhcp_nameserver.length) {
+                            nameservers = nameservers.concat(registry_dhcp_nameserver);
+                        }
+                        if (registry_nameserver && registry_nameserver.length) {
+                            nameservers = nameservers.concat(registry_nameserver);
+                        }
                         return nameservers;
                     }
                 }
