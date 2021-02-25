@@ -24,6 +24,8 @@ const STUDY_ERROR_XHR_NOT_MATCHED = "STUDY_ERROR_XHR_NOT_MATCHED";
 const STUDY_ERROR_XHR_ERROR = "STUDY_ERROR_XHR_ERROR";
 const STUDY_ERROR_XHR_ABORTED = "STUDY_ERROR_XHR_ABORTED";
 const STUDY_ERROR_XHR_TIMEOUT = "STUDY_ERROR_XHR_TIMEOUT";
+const STUDY_ERROR_CAPTIVE_PORTAL_FAILED = "STUDY_ERROR_CAPTIVE_PORTAL_FAILED";
+const STUDY_ERROR_TELEMETRY_CANT_UPLOAD = "STUDY_ERROR_TELEMETRY_CANT_UPLOAD";
 
 const TELEMETRY_TYPE = "dnssec-study-v1";
 const TELEMETRY_OPTIONS = {
@@ -349,25 +351,21 @@ function sendTelemetry(payload) {
 
 function xhrLoadListener() {
     let responseText = this.responseText;
-    console.log(responseText);
     if (!(responseText && responseText === "Hello, world!\n")) {
-        // sendTelemetry({reason: STUDY_ERROR_XHR_NOT_MATCHED});
-        throw new Error(STUDY_ERROR_XHR_NOT_MATCHED);
+        throw new Error(STUDY_XHR_NOT_MATCHED);
     }
+    console.log("XHR test succeeded");
 }
 
 function xhrErrorListener() {
-    // sendTelemetry({reason: STUDY_ERROR_XHR_ERROR});
     throw new Error(STUDY_ERROR_XHR_ERROR);
 }
 
 function xhrAbortListener() {
-    // sendTelemetry({reason: STUDY_ERROR_XHR_ABORTED});
     throw new Error(STUDY_ERROR_XHR_ABORTED);
 }
 
 function xhrTimeoutListener() {
-    // sendTelemetry({reason: STUDY_ERROR_XHR_TIMEOUT});
     throw new Error(STUDY_ERROR_XHR_TIMEOUT);
 }
 
@@ -394,7 +392,7 @@ async function runMeasurement(details) {
     if ((captiveStatus !== "unlocked_portal") &&
         (captiveStatus !== "not_captive") &&
         (captiveStatus !== "clear")) {
-        return;
+        throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_FAILED);
     }
 
     // After we've determine that we are online, run the XHR test
@@ -426,7 +424,7 @@ async function main() {
     // If we can't upload telemetry. don't run the addon
     let canUpload = await browser.telemetry.canUpload();
     if (!canUpload) {
-        return;
+        throw new Error(STUDY_ERROR_TELEMETRY_CANT_UPLOAD);
     }
 
     // Use the captive portal API to determine if we have Internet connectivity.
