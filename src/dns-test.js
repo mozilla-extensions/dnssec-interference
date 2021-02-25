@@ -21,6 +21,7 @@ const STUDY_ERROR_NAMESERVERS_NOT_FOUND = "STUDY_ERROR_NAMESERVERS_NOT_FOUND";
 const STUDY_ERROR_NAMESERVERS_INVALID = "STUDY_ERROR_NAMESERVERS_INVALID";
 const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
 const STUDY_ERROR_XHR_NOT_MATCHED = "STUDY_ERROR_XHR_NOT_MATCHED";
+const STUDY_ERROR_XHR_LOAD_STATUS = "STUDY_ERROR_XHR_LOAD_STATUS";
 const STUDY_ERROR_XHR_ERROR = "STUDY_ERROR_XHR_ERROR";
 const STUDY_ERROR_XHR_ABORTED = "STUDY_ERROR_XHR_ABORTED";
 const STUDY_ERROR_XHR_TIMEOUT = "STUDY_ERROR_XHR_TIMEOUT";
@@ -350,9 +351,13 @@ function sendTelemetry(payload) {
 }
 
 function xhrLoadListener() {
+    if (!(this.readyState === 4 && this.status === 200)) {
+       throw new Error(STUDY_ERROR_XHR_LOAD_STATUS); 
+    }
+
     let responseText = this.responseText;
     if (!(responseText && responseText === "Hello, world!\n")) {
-        throw new Error(STUDY_XHR_NOT_MATCHED);
+        throw new Error(STUDY_ERROR_XHR_NOT_MATCHED);
     }
     console.log("XHR test succeeded");
 }
