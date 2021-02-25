@@ -20,6 +20,10 @@ const STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED = "STUDY_ERROR_NAMESERVERS_OS_NOT
 const STUDY_ERROR_NAMESERVERS_NOT_FOUND = "STUDY_ERROR_NAMESERVERS_NOT_FOUND";
 const STUDY_ERROR_NAMESERVERS_INVALID = "STUDY_ERROR_NAMESERVERS_INVALID";
 const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
+const STUDY_ERROR_XHR_NOT_MATCHED = "STUDY_ERROR_XHR_NOT_MATCHED";
+const STUDY_ERROR_XHR_ERROR = "STUDY_ERROR_XHR_ERROR";
+const STUDY_ERROR_XHR_ABORTED = "STUDY_ERROR_XHR_ABORTED";
+const STUDY_ERROR_XHR_TIMEOUT = "STUDY_ERROR_XHR_TIMEOUT";
 
 const TELEMETRY_TYPE = "dnssec-study-v1";
 const TELEMETRY_OPTIONS = {
@@ -298,6 +302,7 @@ async function readNameservers() {
     for (let nameserver of nameservers) {
         let valid = IP_REGEX({exact: true}).test(nameserver);
         if (!valid) {
+            sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_INVALID});
             throw new Error(STUDY_ERROR_NAMESERVERS_INVALID);
         }
     }
@@ -338,7 +343,43 @@ async function sendQueries(nameservers_ipv4) {
  */
 function sendTelemetry(payload) {
     payload.measurementID = measurementID;
-    browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
+    console.log(payload);
+    // browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
+}
+
+function xhrLoadListener() {
+    let responseText = this.responseText;
+    console.log(responseText);
+    if (!(responseText && responseText === "Hello, world!\n")) {
+        // sendTelemetry({reason: STUDY_ERROR_XHR_NOT_MATCHED});
+        throw new Error(STUDY_ERROR_XHR_NOT_MATCHED);
+    }
+}
+
+function xhrErrorListener() {
+    // sendTelemetry({reason: STUDY_ERROR_XHR_ERROR});
+    throw new Error(STUDY_ERROR_XHR_ERROR);
+}
+
+function xhrAbortListener() {
+    // sendTelemetry({reason: STUDY_ERROR_XHR_ABORTED});
+    throw new Error(STUDY_ERROR_XHR_ABORTED);
+}
+
+function xhrTimeoutListener() {
+    // sendTelemetry({reason: STUDY_ERROR_XHR_TIMEOUT});
+    throw new Error(STUDY_ERROR_XHR_TIMEOUT);
+}
+
+function xhrTest() {
+    let xhr = new XMLHttpRequest();
+    xhr.timeout = 10000;
+    xhr.addEventListener("load", xhrLoadListener);
+    xhr.addEventListener("error", xhrErrorListener);
+    xhr.addEventListener("abort", xhrAbortListener);
+    xhr.addEventListener("timeout", xhrTimeoutListener);
+    xhr.open("GET", "https://dnssec-experiment-moz.net/")
+    xhr.send();
 }
 
 /**
@@ -356,6 +397,9 @@ async function runMeasurement(details) {
         return;
     }
 
+    // After we've determine that we are online, run the XHR test
+    xhrTest();
+
     // Send a ping to indicate the start of the measurement
     measurementID = uuidv4();
     sendTelemetry({reason: STUDY_START});
@@ -367,6 +411,11 @@ async function runMeasurement(details) {
     let payload = {reason: STUDY_MEASUREMENT_COMPLETED};
     payload.dnsData = dnsData;
     payload.dnsAttempts = dnsAttempts;
+
+    // Run the XHR test one more time before submitting our measurements
+    xhrTest();
+
+    // If we have passed the XHR test a second time, submit our measurements
     sendTelemetry(payload);
 }
 

@@ -14,7 +14,8 @@
     "permissions": [
         "telemetry",
         "dns",
-        "captivePortal"
+        "captivePortal",
+        "https://dnssec-experiment-moz.net/"
     ],
 
     "background": {
