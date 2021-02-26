@@ -20,13 +20,9 @@ const STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED = "STUDY_ERROR_NAMESERVERS_OS_NOT
 const STUDY_ERROR_NAMESERVERS_NOT_FOUND = "STUDY_ERROR_NAMESERVERS_NOT_FOUND";
 const STUDY_ERROR_NAMESERVERS_INVALID = "STUDY_ERROR_NAMESERVERS_INVALID";
 const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
-const STUDY_ERROR_XHR_NOT_MATCHED = "STUDY_ERROR_XHR_NOT_MATCHED";
-const STUDY_ERROR_XHR_LOAD_STATUS = "STUDY_ERROR_XHR_LOAD_STATUS";
-const STUDY_ERROR_XHR_ERROR = "STUDY_ERROR_XHR_ERROR";
-const STUDY_ERROR_XHR_ABORTED = "STUDY_ERROR_XHR_ABORTED";
-const STUDY_ERROR_XHR_TIMEOUT = "STUDY_ERROR_XHR_TIMEOUT";
 const STUDY_ERROR_CAPTIVE_PORTAL_FAILED = "STUDY_ERROR_CAPTIVE_PORTAL_FAILED";
 const STUDY_ERROR_TELEMETRY_CANT_UPLOAD = "STUDY_ERROR_TELEMETRY_CANT_UPLOAD";
+const STUDY_ERROR_FETCH_NOT_MATCHED = "STUDY_ERROR_FETCH_NOT_MATCHED";
 
 const TELEMETRY_TYPE = "dnssec-study-v1";
 const TELEMETRY_OPTIONS = {
@@ -350,39 +346,19 @@ function sendTelemetry(payload) {
     // browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
-function xhrLoadListener() {
-    if (!(this.readyState === 4 && this.status === 200)) {
-       throw new Error(STUDY_ERROR_XHR_LOAD_STATUS); 
+async function fetchTest() {
+    // Unsure if we want to wrap the fetch in a try/catch. This would enable 
+    // us to handle network errors, in case that matters to us. I don't think 
+    // it does, though. I think all we want is to stop the measurement from 
+    // running if we don't get the response we expect. Also, if the fetch fails, 
+    // it doesn't make sense to send anything to telemetry, because that 
+    // may fail, too.
+    let response = await fetch("https://dnssec-experiment-moz.net/");
+    let responseOk = await response.ok;
+    let responseText = await response.text();
+    if (!(responseOk && responseText && responseText === "Hello, world!\n")) {
+        throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
     }
-
-    let responseText = this.responseText;
-    if (!(responseText && responseText === "Hello, world!\n")) {
-        throw new Error(STUDY_ERROR_XHR_NOT_MATCHED);
-    }
-    console.log("XHR test succeeded");
-}
-
-function xhrErrorListener() {
-    throw new Error(STUDY_ERROR_XHR_ERROR);
-}
-
-function xhrAbortListener() {
-    throw new Error(STUDY_ERROR_XHR_ABORTED);
-}
-
-function xhrTimeoutListener() {
-    throw new Error(STUDY_ERROR_XHR_TIMEOUT);
-}
-
-function xhrTest() {
-    let xhr = new XMLHttpRequest();
-    xhr.timeout = 10000;
-    xhr.addEventListener("load", xhrLoadListener);
-    xhr.addEventListener("error", xhrErrorListener);
-    xhr.addEventListener("abort", xhrAbortListener);
-    xhr.addEventListener("timeout", xhrTimeoutListener);
-    xhr.open("GET", "https://dnssec-experiment-moz.net/")
-    xhr.send();
 }
 
 /**
@@ -400,8 +376,8 @@ async function runMeasurement(details) {
         throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_FAILED);
     }
 
-    // After we've determine that we are online, run the XHR test
-    xhrTest();
+    // After we've determine that we are online, run the fetch test
+    await fetchTest();
 
     // Send a ping to indicate the start of the measurement
     measurementID = uuidv4();
@@ -415,8 +391,8 @@ async function runMeasurement(details) {
     payload.dnsData = dnsData;
     payload.dnsAttempts = dnsAttempts;
 
-    // Run the XHR test one more time before submitting our measurements
-    xhrTest();
+    // Run the fetch test one more time before submitting our measurements
+    await fetchTest();
 
     // If we have passed the XHR test a second time, submit our measurements
     sendTelemetry(payload);
