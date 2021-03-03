@@ -143,21 +143,20 @@ async function sendUDPWebExtQuery(domain) {
     let key = "udpAWebExt";
     let errorKey = "AWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
-    for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
-        try {
-            dnsAttempts[key] += 1
-            let response = await browser.dns.resolve(domain, flags);
-            // If we don't already have a response saved in dnsData, save this one
-            if (dnsData[key].length == 0) {
-                dnsData[key] = response.addresses;
-            }
-            return;
-        } catch(e) {
-            let errorReason = "STUDY_ERROR_UDP_WEBEXT";
-            sendTelemetry({reason: errorReason,
-                           errorRRTYPE: errorKey,
-                           errorAttempt: dnsAttempts[key]});
+    
+    try {
+        dnsAttempts[key] += 1
+        let response = await browser.dns.resolve(domain, flags);
+        // If we don't already have a response saved in dnsData, save this one
+        if (dnsData[key].length == 0) {
+            dnsData[key] = response.addresses;
         }
+        return;
+    } catch(e) {
+        let errorReason = "STUDY_ERROR_UDP_WEBEXT";
+        sendTelemetry({reason: errorReason,
+                       errorRRTYPE: errorKey,
+                       errorAttempt: dnsAttempts[key]});
     }
 }
 
