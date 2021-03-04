@@ -50,7 +50,6 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                      * a registry
                      */
                     async readNameserversWin() {
-                        let nameservers = [];
                         let rootKey = Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE;
                         let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
                             Ci.nsIWindowsRegKey
@@ -60,19 +59,28 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         );
 
                         try {
-                            // Parse top-level registry
+                            // Parse top-level registry for the Nameserver and 
+                            // the DhcpNameserver keys. If we find something,
+                            // return immediately.
                             key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
                             let parentRegistryNameservers = await this.parseRegistry(key);
-                            nameservers = nameservers.concat(parentRegistryNameservers);
+                            if (parentRegistryNameservers.length) {
+                                console.log("Nameservers found on Windows: " + nameservers);
+                                return parentRegistryNameservers;
+                            }
 
-                            // Parse per-interface registries
+                            // If we don't find anything in the top-level 
+                            // registry, parse per-interface registries.
                             key_if.open(rootKey, WIN_REGISTRY_TCPIP_IF_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
                             let childCount = key_if.childCount;
                             for (let i = 0; i < childCount; i++) {
                                 let childName = key_if.getChildName(i);
                                 let childKey = key_if.openChild(childName, Ci.nsIWindowsRegKey.ACCESS_READ);
                                 let childRegistryNameservers = await this.parseRegistry(childKey);
-                                nameservers = nameservers.concat(childRegistryNameservers);
+                                if (childRegistryNameservers.length) {
+                                    console.log("Nameservers found on Windows: " + nameservers);
+                                    return childRegistryNameservers;
+                                }
                             }
                         } catch(e) {
                             throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_WIN);
@@ -80,37 +88,38 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                             key.close();
                             key_if.close();
                         }
-
-                        // Only consider unique nameservers
-                        nameservers = nameservers.filter((x, i, a) => a.indexOf(x) == i);
-                        console.log("Unique nameservers found on Windows: " + nameservers);
-                        return nameservers;
+                        return [];
                     },
 
                     async parseRegistry(key) {
-                        let nameservers = [];
-                        let registry_dhcp_nameserver = [];
-                        let registry_nameserver = [];
-                        if (key.hasValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY)) {
-                            let registry_dhcp_nameserver_str = key.readStringValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY);
-                            registry_dhcp_nameserver         = registry_dhcp_nameserver_str
-                                                               .trim()
-                                                               .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
-                        }
+                        // First parse the Nameserver key, since it corresponds 
+                        // to what users manually set (if anything). If we 
+                        // found some nameservers, return immediately.
                         if (key.hasValue(WIN_REGISTRY_NAMESERVER_KEY)) {
                             let registry_nameserver_str = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
-                            registry_nameserver         = registry_nameserver_str
+                            let registry_nameserver     = registry_nameserver_str
                                                           .trim()
                                                           .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+                            registry_nameserver = registry_nameserver.filter((x, i, a) => a.indexOf(x) == i);
+                            if (registry_nameserver && registry_nameserver.length) {
+                                return registry_nameserver;
+                            }
                         }
 
-                        if (registry_dhcp_nameserver && registry_dhcp_nameserver.length) {
-                            nameservers = nameservers.concat(registry_dhcp_nameserver);
+                        // If we didn't find any user-set nameservers in the 
+                        // Nameservers key, read the nameservers set by DHCP 
+                        // in the DhcpNameserver key.
+                        if (key.hasValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY)) {
+                            let registry_dhcp_nameserver_str = key.readStringValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY);
+                            let registry_dhcp_nameserver     = registry_dhcp_nameserver_str
+                                                               .trim()
+                                                               .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
+                            registry_dhcp_nameserver = registry_dhcp_nameserver.filter((x, i, a) => a.indexOf(x) == i);
+                            if (registry_dhcp_nameserver && registry_dhcp_nameserver.length) {
+                                return registry_dhcp_nameserver;
+                            }
                         }
-                        if (registry_nameserver && registry_nameserver.length) {
-                            nameservers = nameservers.concat(registry_nameserver);
-                        }
-                        return nameservers;
+                        return [];
                     }
                 }
             }
