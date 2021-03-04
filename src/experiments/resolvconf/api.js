@@ -51,10 +51,10 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                      */
                     async readNameserversWin() {
                         let rootKey = Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE;
-                        let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
+                        let parentKey = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
                             Ci.nsIWindowsRegKey
                         );
-                        let key_if = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
+                        let ifKey = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
                             Ci.nsIWindowsRegKey
                         );
 
@@ -62,31 +62,31 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                             // Parse top-level registry for the Nameserver and 
                             // the DhcpNameserver keys. If we find something,
                             // return immediately.
-                            key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
-                            let parentRegistryNameservers = await this.parseRegistry(key);
-                            if (parentRegistryNameservers.length) {
+                            parentKey.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
+                            let parentNameservers = await this.parseRegistry(parentKey);
+                            if (parentNameservers.length) {
                                 console.log("Nameservers found on Windows: " + nameservers);
-                                return parentRegistryNameservers;
+                                return parentNameservers;
                             }
 
                             // If we don't find anything in the top-level 
                             // registry, parse per-interface registries.
-                            key_if.open(rootKey, WIN_REGISTRY_TCPIP_IF_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
-                            let childCount = key_if.childCount;
-                            for (let i = 0; i < childCount; i++) {
-                                let childName = key_if.getChildName(i);
-                                let childKey = key_if.openChild(childName, Ci.nsIWindowsRegKey.ACCESS_READ);
-                                let childRegistryNameservers = await this.parseRegistry(childKey);
-                                if (childRegistryNameservers.length) {
+                            ifKey.open(rootKey, WIN_REGISTRY_TCPIP_IF_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
+                            let ifCount = ifKey.childCount;
+                            for (let i = 0; i < ifCount; i++) {
+                                let ifName = ifKey.getChildName(i);
+                                let ifKey = ifKey.openChild(ifName, Ci.nsIWindowsRegKey.ACCESS_READ);
+                                let ifNameservers = await this.parseRegistry(ifKey);
+                                if (ifNameservers.length) {
                                     console.log("Nameservers found on Windows: " + nameservers);
-                                    return childRegistryNameservers;
+                                    return ifNameservers;
                                 }
                             }
                         } catch(e) {
                             throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_WIN);
                         } finally {
-                            key.close();
-                            key_if.close();
+                            parentKey.close();
+                            ifKey.close();
                         }
                         return [];
                     },
@@ -97,6 +97,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         // found some nameservers, return immediately.
                         if (key.hasValue(WIN_REGISTRY_NAMESERVER_KEY)) {
                             let registry_nameserver_str = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
+                            // Very basic parsing to look for IPv4 addressessss.
                             let registry_nameserver     = registry_nameserver_str
                                                           .trim()
                                                           .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
@@ -111,6 +112,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         // in the DhcpNameserver key.
                         if (key.hasValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY)) {
                             let registry_dhcp_nameserver_str = key.readStringValue(WIN_REGISTRY_DHCP_NAMESERVER_KEY);
+                            // Very basic parsing to look for IPv4 addressessss.
                             let registry_dhcp_nameserver     = registry_dhcp_nameserver_str
                                                                .trim()
                                                                .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
