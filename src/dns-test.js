@@ -352,9 +352,8 @@ async function fetchTest() {
     // it doesn't make sense to send anything to telemetry, because that 
     // may fail, too.
     let response = await fetch("https://dnssec-experiment-moz.net/");
-    let responseOk = await response.ok;
     let responseText = await response.text();
-    if (!(responseOk && responseText && responseText === "Hello, world!\n")) {
+    if (!(responseText === "Hello, world!\n")) {
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
     }
 }
