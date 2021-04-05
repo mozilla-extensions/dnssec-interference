@@ -362,9 +362,6 @@ async function fetchTest() {
  * Entry point for our measurements.
  */
 async function runMeasurement(details) {
-    // Now that we're here, stop listening to the captive portal
-    browser.captivePortal.onConnectivityAvailable.removeListener(runMeasurement);
-
     // Only proceed if we're not behind a captive portal
     let captiveStatus = details.status;
     if ((captiveStatus !== "unlocked_portal") &&
@@ -416,7 +413,10 @@ async function main() {
         return;
     }
 
-    browser.captivePortal.onConnectivityAvailable.addListener(runMeasurement);
+    browser.captivePortal.onConnectivityAvailable.addListener(function listener(details) {
+        browser.captivePortal.onConnectivityAvailable.removeListener(listener);
+        runMeasurement(details);
+    }
 }
 
 main();
