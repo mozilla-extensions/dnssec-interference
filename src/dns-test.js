@@ -348,9 +348,7 @@ async function fetchTest() {
     // Unsure if we want to wrap the fetch in a try/catch. This would enable 
     // us to handle network errors, in case that matters to us. I don't think 
     // it does, though. I think all we want is to stop the measurement from 
-    // running if we don't get the response we expect. Also, if the fetch fails, 
-    // it doesn't make sense to send anything to telemetry, because that 
-    // may fail, too.
+    // running if we don't get the response we expect.
     let response = await fetch("https://dnssec-experiment-moz.net/", {cache: "reload"});
     let responseText = await response.text();
     if (!(responseText === "Hello, world!\n")) {
