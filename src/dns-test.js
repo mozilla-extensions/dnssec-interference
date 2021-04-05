@@ -341,8 +341,7 @@ async function sendQueries(nameservers_ipv4) {
  */
 function sendTelemetry(payload) {
     payload.measurementID = measurementID;
-    console.log(payload);
-    // browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
+    browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
 async function fetchTest() {
