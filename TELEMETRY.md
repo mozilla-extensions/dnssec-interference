@@ -129,6 +129,7 @@ sent. These pings take the following form:
                "STUDY_ERROR_UDP_PREMATURE_CLOSE",
                "STUDY_ERROR_UDP_BYTES_WRITTEN",
                "STUDY_ERROR_UDP_QUERY_TIMEOUT",
+               "STUDY_ERROR_UDP_WEBEXT",
                "STUDY_ERROR_TCP_MISC",
                "STUDY_ERROR_TCP_ENCODE",
                "STUDY_ERROR_TCP_NETWORK_TIMEOUT",
