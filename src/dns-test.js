@@ -353,7 +353,7 @@ async function fetchTest() {
     // running if we don't get the response we expect.
     let response = await fetch("https://dnssec-experiment-moz.net/", {cache: "reload"});
     let responseText = await response.text();
-    if (!(responseText === "Hello, world!\n")) {
+    if (responseText !== "Hello, world!\n") {
         sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
     }
