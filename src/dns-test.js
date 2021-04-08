@@ -363,7 +363,16 @@ async function fetchTest() {
  * Entry point for our measurements.
  */
 async function runMeasurement(details) {
-    // Only proceed if we're not behind a captive portal
+    /**
+     * Only proceed if we're not behind a captive portal, as determined by
+     * browser.captivePortal.getState() and browser.captivePortal.onConnectivityAvailable.addListener().
+     *
+     * Possible states for browser.captivePortal.getState():
+     * unknown, not_captive, unlocked_portal, or locked_portal.
+     *
+     * Possible states passed to the callback for browser.captivePortal.onConnectivityAvailable.addListener():
+     * captive or clear.
+     */
     let captiveStatus = details.status;
     if ((captiveStatus !== "unlocked_portal") &&
         (captiveStatus !== "not_captive") &&
@@ -416,9 +425,10 @@ async function main() {
     }
 
 
+    // Possible states for browser.captivePortal.getState():
+    // unknown, not_captive, unlocked_portal, or locked_portal.
     if ((captiveStatus === "unlocked_portal") ||
-        (captiveStatus === "not_captive") ||
-        (captiveStatus === "clear")) {
+        (captiveStatus === "not_captive")) {
         await runMeasurement({status: captiveStatus});
         return;
     }
