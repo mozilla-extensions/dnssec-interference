@@ -354,6 +354,7 @@ async function fetchTest() {
     let response = await fetch("https://dnssec-experiment-moz.net/", {cache: "reload"});
     let responseText = await response.text();
     if (!(responseText === "Hello, world!\n")) {
+        sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
     }
 }
@@ -367,6 +368,7 @@ async function runMeasurement(details) {
     if ((captiveStatus !== "unlocked_portal") &&
         (captiveStatus !== "not_captive") &&
         (captiveStatus !== "clear")) {
+        sendTelemetry({reason: STUDY_ERROR_CAPTIVE_PORTAL_FAILED});
         throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_FAILED);
     }
 
