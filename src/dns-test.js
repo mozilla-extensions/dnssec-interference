@@ -12,6 +12,7 @@ const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let 
 
 const STUDY_START = "STUDY_START";
 const STUDY_MEASUREMENT_COMPLETED = "STUDY_MEASUREMENT_COMPLETED";
+const STUDY_ERROR_UDP_WEBEXT = "STUDY_ERROR_UDP_WEBEXT";
 const STUDY_ERROR_UDP_MISC = "STUDY_ERROR_UDP_MISC";
 const STUDY_ERROR_TCP_MISC = "STUDY_ERROR_TCP_MISC";
 const STUDY_ERROR_UDP_ENCODE = "STUDY_ERROR_UDP_ENCODE";
@@ -21,6 +22,7 @@ const STUDY_ERROR_NAMESERVERS_NOT_FOUND = "STUDY_ERROR_NAMESERVERS_NOT_FOUND";
 const STUDY_ERROR_NAMESERVERS_INVALID = "STUDY_ERROR_NAMESERVERS_INVALID";
 const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
 const STUDY_ERROR_CAPTIVE_PORTAL_FAILED = "STUDY_ERROR_CAPTIVE_PORTAL_FAILED";
+const STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED = "STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED";
 const STUDY_ERROR_TELEMETRY_CANT_UPLOAD = "STUDY_ERROR_TELEMETRY_CANT_UPLOAD";
 const STUDY_ERROR_FETCH_NOT_MATCHED = "STUDY_ERROR_FETCH_NOT_MATCHED";
 
@@ -131,13 +133,12 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok) {
 }
 
 /**
- * Send a DNS query over UDP using the WebExtensions dns.resolve API, 
- * re-transmitting according to default resolvconf behavior if the API 
- * returns an error.
+ * Send a DNS query for our A record over UDP using the WebExtensions 
+ * dns.resolve() API
  *
- * We re-transmit at most RESOLVCONF_ATTEMPTS. We let the 
- * underlying API handle which nameserver is used. We make that DoH is not 
- * used and that A records are queried, rather than AAAA.
+ * We let the underlying API handle re-transmissions and which nameserver is 
+ * used. We make sure that DoH is not used and that A records are queried, 
+ * rather than AAAA.
  */
 async function sendUDPWebExtQuery(domain) {
     let key = "udpAWebExt";
@@ -153,7 +154,7 @@ async function sendUDPWebExtQuery(domain) {
         }
         return;
     } catch(e) {
-        let errorReason = "STUDY_ERROR_UDP_WEBEXT";
+        let errorReason = STUDY_ERROR_UDP_WEBEXT;
         sendTelemetry({reason: errorReason,
                        errorRRTYPE: errorKey,
                        errorAttempt: dnsAttempts[key]});
@@ -279,6 +280,7 @@ async function readNameservers() {
         } else if (platform.os == "win") {
             nameservers = await browser.experiments.resolvconf.readNameserversWin();
         } else {
+            sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED});
             throw new Error(STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED);
         }
     } catch(e) {
@@ -403,7 +405,15 @@ async function main() {
     // Use the captive portal API to determine if we have Internet connectivity.
     // If we already have connectivity, run the measurement.
     // If not, wait until we get connectivity to run it.
-    let captiveStatus = await browser.captivePortal.getState();
+    let captiveStatus;
+    try {
+        captiveStatus = await browser.captivePortal.getState();
+    } catch(e) {
+        sendTelemetry({reason: STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED});
+        throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED);
+    }
+
+
     if ((captiveStatus === "unlocked_portal") ||
         (captiveStatus === "not_captive") ||
         (captiveStatus === "clear")) {
@@ -414,7 +424,7 @@ async function main() {
     browser.captivePortal.onConnectivityAvailable.addListener(function listener(details) {
         browser.captivePortal.onConnectivityAvailable.removeListener(listener);
         runMeasurement(details);
-    }
+    });
 }
 
 main();
