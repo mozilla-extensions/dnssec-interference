@@ -140,9 +140,12 @@ sent. These pings take the following form:
                "STUDY_ERROR_TCP_QUERY_TIMEOUT",
                "STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED",
                "STUDY_ERROR_NAMESERVERS_NOT_FOUND",
-               "STUDY_ERROR_NAMESERVERS_INVALID",
+               "STUDY_ERROR_NAMESERVERS_INVALID_ADDR",
                "STUDY_ERROR_NAMESERVERS_MISC",
-               "STUDY_ERROR_NAMESERVERS_FILE"), // One of these values
+               "STUDY_ERROR_NAMESERVERS_FILE",
+               "STUDY_ERROR_CAPTIVE_PORTAL_FAILED",
+               "STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED",
+               "STUDY_ERROR_FETCH_NOT_MATCHED"), // One of these values
     "errorAttempt": 1,
     "errorRRTYPE": "A"
   }
