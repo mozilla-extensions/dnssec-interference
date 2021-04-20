@@ -1,9 +1,11 @@
 /* global browser */ 
+const CRYPTO = require("crypto");
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
+const A_WEBEXT_DOMAIN_NAME = "webext.dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
 const HTTPS_DOMAIN_NAME = "httpssvc.dnssec-experiment-moz.net";
 
@@ -12,7 +14,8 @@ const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let 
 
 const STUDY_START = "STUDY_START";
 const STUDY_MEASUREMENT_COMPLETED = "STUDY_MEASUREMENT_COMPLETED";
-const STUDY_ERROR_UDP_WEBEXT = "STUDY_ERROR_UDP_WEBEXT";
+const STUDY_ERROR_UDP_WEBEXT_DOMAIN = "STUDY_ERROR_UDP_WEBEXT_DOMAIN";
+const STUDY_ERROR_UDP_WEBEXT_RESOLVE = "STUDY_ERROR_UDP_WEBEXT_RESOLVE";
 const STUDY_ERROR_UDP_MISC = "STUDY_ERROR_UDP_MISC";
 const STUDY_ERROR_TCP_MISC = "STUDY_ERROR_TCP_MISC";
 const STUDY_ERROR_UDP_ENCODE = "STUDY_ERROR_UDP_ENCODE";
@@ -133,8 +136,13 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok) {
 }
 
 /**
- * Send a DNS query for our A record over UDP using the WebExtensions 
+ * Send a DNS query for an A record over UDP using the WebExtensions
  * dns.resolve() API
+ *
+ * We query a random sub-domain under a domain name we control to ensure
+ * that our queries are not answered by the OS DNS cache. We do not seem
+ * to experience the same issue with the internal UDP/TCP APIs because
+ * they are not calling getaddrinfo().
  *
  * We let the underlying API handle re-transmissions and which nameserver is 
  * used. We make sure that DoH is not used and that A records are queried, 
@@ -144,17 +152,28 @@ async function sendUDPWebExtQuery(domain) {
     let key = "udpAWebExt";
     let errorKey = "AWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
-    
+
+    let randomSubdomain;
+    let randomDomain;
+    try {
+        randomSubdomain = CRYPTO.randomBytes(16).toString('hex');
+        randomDomain = randomSubdomain + '.' + domain;
+    } catch(e) {
+        sendTelemetry({reason: STUDY_ERROR_UDP_WEBEXT_DOMAIN});
+        throw new Error(STUDY_ERROR_UDP_WEBEXT_DOMAIN);
+    }
+
+    console.log("Random domain: " + randomDomain);
     try {
         dnsAttempts[key] += 1
-        let response = await browser.dns.resolve(domain, flags);
+        let response = await browser.dns.resolve(randomDomain, flags);
         // If we don't already have a response saved in dnsData, save this one
         if (dnsData[key].length == 0) {
             dnsData[key] = response.addresses;
         }
         return;
     } catch(e) {
-        let errorReason = STUDY_ERROR_UDP_WEBEXT;
+        let errorReason = STUDY_ERROR_UDP_WEBEXT_RESOLVE;
         sendTelemetry({reason: errorReason,
                        errorRRTYPE: errorKey,
                        errorAttempt: dnsAttempts[key]});
@@ -323,7 +342,7 @@ async function sendQueries(nameservers_ipv4) {
             await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         } else if (rrtype == 'A') {
             // First send queries using the WebExtensions dns.resolve API as a baseline
-            await sendUDPWebExtQuery(APEX_DOMAIN_NAME);
+            await sendUDPWebExtQuery(A_WEBEXT_DOMAIN_NAME);
 
             // Then send queries using our experimental APIs with the DNSSEC OK bit, then without
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
