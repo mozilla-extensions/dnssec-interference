@@ -163,7 +163,6 @@ async function sendUDPWebExtQuery(domain) {
         throw new Error(STUDY_ERROR_UDP_WEBEXT_DOMAIN);
     }
 
-    console.log("Random domain: " + randomDomain);
     try {
         dnsAttempts[key] += 1
         let response = await browser.dns.resolve(randomDomain, flags);
