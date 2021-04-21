@@ -1,5 +1,4 @@
 /* global browser */ 
-const CRYPTO = require("crypto");
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
@@ -136,6 +135,21 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok) {
 }
 
 /**
+ * Generate a random sub-domain under a domain name we control to query using 
+ * dns.resolve()
+ */
+function createRandomDomain(domain) {
+    // Generate random values
+    let typedArray = new Uint8Array(16);
+    let randomValues = crypto.getRandomValues(typedArray);
+
+    // Create a random sub-domain by converting each value to a hex string and joining the resulting strings
+    let subdomain = Array.from(randomValues, x => x.toString(16).padStart(2, "0")).join("")
+    let randomDomain = subdomain + '.' + domain;
+    return randomDomain;
+}
+
+/**
  * Send a DNS query for an A record over UDP using the WebExtensions
  * dns.resolve() API
  *
@@ -152,12 +166,9 @@ async function sendUDPWebExtQuery(domain) {
     let key = "udpAWebExt";
     let errorKey = "AWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
-
-    let randomSubdomain;
     let randomDomain;
     try {
-        randomSubdomain = CRYPTO.randomBytes(16).toString('hex');
-        randomDomain = randomSubdomain + '.' + domain;
+        randomDomain = createRandomDomain(domain);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_UDP_WEBEXT_DOMAIN});
         throw new Error(STUDY_ERROR_UDP_WEBEXT_DOMAIN);
