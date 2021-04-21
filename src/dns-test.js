@@ -13,8 +13,7 @@ const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let 
 
 const STUDY_START = "STUDY_START";
 const STUDY_MEASUREMENT_COMPLETED = "STUDY_MEASUREMENT_COMPLETED";
-const STUDY_ERROR_UDP_WEBEXT_DOMAIN = "STUDY_ERROR_UDP_WEBEXT_DOMAIN";
-const STUDY_ERROR_UDP_WEBEXT_RESOLVE = "STUDY_ERROR_UDP_WEBEXT_RESOLVE";
+const STUDY_ERROR_UDP_WEBEXT = "STUDY_ERROR_UDP_WEBEXT";
 const STUDY_ERROR_UDP_MISC = "STUDY_ERROR_UDP_MISC";
 const STUDY_ERROR_TCP_MISC = "STUDY_ERROR_TCP_MISC";
 const STUDY_ERROR_UDP_ENCODE = "STUDY_ERROR_UDP_ENCODE";
@@ -140,8 +139,8 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok) {
  */
 function createRandomDomain(domain) {
     // Generate random values
-    let typedArray = new Uint8Array(16);
-    let randomValues = crypto.getRandomValues(typedArray);
+    let randomValues = new Uint8Array(16);
+    crypto.getRandomValues(randomValues);
 
     // Create a random sub-domain by converting each value to a hex string and joining the resulting strings
     let subdomain = Array.from(randomValues, x => x.toString(16).padStart(2, "0")).join("")
@@ -166,13 +165,7 @@ async function sendUDPWebExtQuery(domain) {
     let key = "udpAWebExt";
     let errorKey = "AWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
-    let randomDomain;
-    try {
-        randomDomain = createRandomDomain(domain);
-    } catch(e) {
-        sendTelemetry({reason: STUDY_ERROR_UDP_WEBEXT_DOMAIN});
-        throw new Error(STUDY_ERROR_UDP_WEBEXT_DOMAIN);
-    }
+    let randomDomain = createRandomDomain(domain);
 
     try {
         dnsAttempts[key] += 1
@@ -183,7 +176,7 @@ async function sendUDPWebExtQuery(domain) {
         }
         return;
     } catch(e) {
-        let errorReason = STUDY_ERROR_UDP_WEBEXT_RESOLVE;
+        let errorReason = STUDY_ERROR_UDP_WEBEXT;
         sendTelemetry({reason: errorReason,
                        errorRRTYPE: errorKey,
                        errorAttempt: dnsAttempts[key]});
