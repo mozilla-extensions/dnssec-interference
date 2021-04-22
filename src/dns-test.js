@@ -25,6 +25,7 @@ const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
 const STUDY_ERROR_CAPTIVE_PORTAL_FAILED = "STUDY_ERROR_CAPTIVE_PORTAL_FAILED";
 const STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED = "STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED";
 const STUDY_ERROR_TELEMETRY_CANT_UPLOAD = "STUDY_ERROR_TELEMETRY_CANT_UPLOAD";
+const STUDY_ERROR_FETCH_FAILED = "STUDY_ERROR_FETCH_FAILED";
 const STUDY_ERROR_FETCH_NOT_MATCHED = "STUDY_ERROR_FETCH_NOT_MATCHED";
 
 const TELEMETRY_TYPE = "dnssec-study-v1";
@@ -369,12 +370,16 @@ function sendTelemetry(payload) {
 }
 
 async function fetchTest() {
-    // Unsure if we want to wrap the fetch in a try/catch. This would enable 
-    // us to handle network errors, in case that matters to us. I don't think 
-    // it does, though. I think all we want is to stop the measurement from 
-    // running if we don't get the response we expect.
-    let response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
-    let responseText = await response.text();
+    let response;
+    let responseText;
+    try {
+        response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
+        responseText = await response.text();
+    } catch(e) {
+        sendTelemetry({reason: STUDY_ERROR_FETCH_FAILED});
+        throw new Error(STUDY_ERROR_FETCH_FAILED);
+    }
+
     if (responseText !== "Hello, world!\n") {
         sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
@@ -407,7 +412,6 @@ async function runMeasurement(details) {
     await fetchTest();
 
     // Send a ping to indicate the start of the measurement
-    measurementID = uuidv4();
     sendTelemetry({reason: STUDY_START});
 
     let nameservers_ipv4 = await readNameservers();
@@ -429,6 +433,8 @@ async function runMeasurement(details) {
  * Entry point for our addon.
  */
 async function main() {
+    measurementID = uuidv4();
+
     // If we can't upload telemetry. don't run the addon
     let canUpload = await browser.telemetry.canUpload();
     if (!canUpload) {
