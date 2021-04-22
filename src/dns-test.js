@@ -1,8 +1,10 @@
 /* global browser */ 
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
+const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
+const A_WEBEXT_DOMAIN_NAME = "webext.dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
 const HTTPS_DOMAIN_NAME = "httpssvc.dnssec-experiment-moz.net";
 
@@ -11,13 +13,20 @@ const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let 
 
 const STUDY_START = "STUDY_START";
 const STUDY_MEASUREMENT_COMPLETED = "STUDY_MEASUREMENT_COMPLETED";
+const STUDY_ERROR_UDP_WEBEXT = "STUDY_ERROR_UDP_WEBEXT";
 const STUDY_ERROR_UDP_MISC = "STUDY_ERROR_UDP_MISC";
 const STUDY_ERROR_TCP_MISC = "STUDY_ERROR_TCP_MISC";
 const STUDY_ERROR_UDP_ENCODE = "STUDY_ERROR_UDP_ENCODE";
 const STUDY_ERROR_TCP_ENCODE = "STUDY_ERROR_TCP_ENCODE";
 const STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED = "STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED";
 const STUDY_ERROR_NAMESERVERS_NOT_FOUND = "STUDY_ERROR_NAMESERVERS_NOT_FOUND";
+const STUDY_ERROR_NAMESERVERS_INVALID_ADDR = "STUDY_ERROR_NAMESERVERS_INVALID_ADDR";
 const STUDY_ERROR_NAMESERVERS_MISC = "STUDY_ERROR_NAMESERVERS_MISC";
+const STUDY_ERROR_CAPTIVE_PORTAL_FAILED = "STUDY_ERROR_CAPTIVE_PORTAL_FAILED";
+const STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED = "STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED";
+const STUDY_ERROR_TELEMETRY_CANT_UPLOAD = "STUDY_ERROR_TELEMETRY_CANT_UPLOAD";
+const STUDY_ERROR_FETCH_FAILED = "STUDY_ERROR_FETCH_FAILED";
+const STUDY_ERROR_FETCH_NOT_MATCHED = "STUDY_ERROR_FETCH_NOT_MATCHED";
 
 const TELEMETRY_TYPE = "dnssec-study-v1";
 const TELEMETRY_OPTIONS = {
@@ -33,41 +42,43 @@ const UDP_PAYLOAD_SIZE = 4096;
 var measurementID;
 
 var dnsData = {
-    udpA:      [],
-    udpADO:    [],
-    udpRRSIG:  [],
-    udpDNSKEY: [],
-    udpSMIMEA: [],
-    udpHTTPS:  [],
-    udpNEWONE: [],
-    udpNEWTWO: [],
-    tcpA:      [],
-    tcpADO:    [],
-    tcpRRSIG:  [],
-    tcpDNSKEY: [],
-    tcpSMIMEA: [],
-    tcpHTTPS:  [],
-    tcpNEWONE: [],
-    tcpNEWTWO: []
+    udpAWebExt:   [],
+    udpA:         [],
+    udpADO:       [],
+    udpRRSIG:     [],
+    udpDNSKEY:    [],
+    udpSMIMEA:    [],
+    udpHTTPS:     [],
+    udpNEWONE:    [],
+    udpNEWTWO:    [],
+    tcpA:         [],
+    tcpADO:       [],
+    tcpRRSIG:     [],
+    tcpDNSKEY:    [],
+    tcpSMIMEA:    [],
+    tcpHTTPS:     [],
+    tcpNEWONE:    [],
+    tcpNEWTWO:    []
 };
 
 var dnsAttempts = {
-    udpA:      0,
-    udpADO:    0,
-    udpRRSIG:  0,
-    udpDNSKEY: 0,
-    udpSMIMEA: 0,
-    udpHTTPS:  0,
-    udpNEWONE: 0,
-    udpNEWTWO: 0,
-    tcpA:      0,
-    tcpADO:    0,
-    tcpRRSIG:  0,
-    tcpDNSKEY: 0,
-    tcpSMIMEA: 0,
-    tcpHTTPS:  0,
-    tcpNEWONE: 0,
-    tcpNEWTWO: 0 
+    udpAWebExt: 0,
+    udpA:       0,
+    udpADO:     0,
+    udpRRSIG:   0,
+    udpDNSKEY:  0,
+    udpSMIMEA:  0,
+    udpHTTPS:   0,
+    udpNEWONE:  0,
+    udpNEWTWO:  0,
+    tcpA:       0,
+    tcpADO:     0,
+    tcpRRSIG:   0,
+    tcpDNSKEY:  0,
+    tcpSMIMEA:  0,
+    tcpHTTPS:   0,
+    tcpNEWONE:  0,
+    tcpNEWTWO:  0
 };
 
 /**
@@ -121,6 +132,56 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok) {
         });
     }
     return buf;
+}
+
+/**
+ * Generate a random sub-domain under a domain name we control to query using 
+ * dns.resolve()
+ */
+function createRandomDomain(domain) {
+    // Generate random values
+    let randomValues = new Uint8Array(16);
+    crypto.getRandomValues(randomValues);
+
+    // Create a random sub-domain by converting each value to a hex string and joining the resulting strings
+    let subdomain = Array.from(randomValues, x => x.toString(16).padStart(2, "0")).join("")
+    let randomDomain = subdomain + '.' + domain;
+    return randomDomain;
+}
+
+/**
+ * Send a DNS query for an A record over UDP using the WebExtensions
+ * dns.resolve() API
+ *
+ * We query a random sub-domain under a domain name we control to ensure
+ * that our queries are not answered by the OS DNS cache. We do not seem
+ * to experience the same issue with the internal UDP/TCP APIs because
+ * they are not calling getaddrinfo().
+ *
+ * We let the underlying API handle re-transmissions and which nameserver is 
+ * used. We make sure that DoH is not used and that A records are queried, 
+ * rather than AAAA.
+ */
+async function sendUDPWebExtQuery(domain) {
+    let key = "udpAWebExt";
+    let errorKey = "AWebExt";
+    let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
+    let randomDomain = createRandomDomain(domain);
+
+    try {
+        dnsAttempts[key] += 1
+        let response = await browser.dns.resolve(randomDomain, flags);
+        // If we don't already have a response saved in dnsData, save this one
+        if (dnsData[key].length == 0) {
+            dnsData[key] = response.addresses;
+        }
+        return;
+    } catch(e) {
+        let errorReason = STUDY_ERROR_UDP_WEBEXT;
+        sendTelemetry({reason: errorReason,
+                       errorRRTYPE: errorKey,
+                       errorAttempt: dnsAttempts[key]});
+    }
 }
 
 /**
@@ -242,6 +303,7 @@ async function readNameservers() {
         } else if (platform.os == "win") {
             nameservers = await browser.experiments.resolvconf.readNameserversWin();
         } else {
+            sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED});
             throw new Error(STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED);
         }
     } catch(e) {
@@ -259,6 +321,14 @@ async function readNameservers() {
         sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_NOT_FOUND});
         throw new Error(STUDY_ERROR_NAMESERVERS_NOT_FOUND);
     }
+
+    for (let nameserver of nameservers) {
+        let valid = IP_REGEX({exact: true}).test(nameserver);
+        if (!valid) {
+            sendTelemetry({reason: STUDY_ERROR_NAMESERVERS_INVALID_ADDR});
+            throw new Error(STUDY_ERROR_NAMESERVERS_INVALID_ADDR);
+        }
+    }
     return nameservers;
 }
 
@@ -275,7 +345,10 @@ async function sendQueries(nameservers_ipv4) {
             await sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
             await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         } else if (rrtype == 'A') {
-            // First send queries with the DNSSEC OK bit, then without
+            // First send queries using the WebExtensions dns.resolve API as a baseline
+            await sendUDPWebExtQuery(A_WEBEXT_DOMAIN_NAME);
+
+            // Then send queries using our experimental APIs with the DNSSEC OK bit, then without
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
             await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
@@ -296,18 +369,49 @@ function sendTelemetry(payload) {
     browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
+async function fetchTest() {
+    let response;
+    let responseText;
+    try {
+        response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
+        responseText = await response.text();
+    } catch(e) {
+        sendTelemetry({reason: STUDY_ERROR_FETCH_FAILED});
+        throw new Error(STUDY_ERROR_FETCH_FAILED);
+    }
+
+    if (responseText !== "Hello, world!\n") {
+        sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
+        throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
+    }
+}
+
 /**
  * Entry point for our measurements.
  */
-async function runMeasurement() {
-    // If we can't upload telemetry. don't run the addon
-    let canUpload = await browser.telemetry.canUpload();
-    if (!canUpload) {
-        return
+async function runMeasurement(details) {
+    /**
+     * Only proceed if we're not behind a captive portal, as determined by
+     * browser.captivePortal.getState() and browser.captivePortal.onConnectivityAvailable.addListener().
+     *
+     * Possible states for browser.captivePortal.getState():
+     * unknown, not_captive, unlocked_portal, or locked_portal.
+     *
+     * Possible states passed to the callback for browser.captivePortal.onConnectivityAvailable.addListener():
+     * captive or clear.
+     */
+    let captiveStatus = details.status;
+    if ((captiveStatus !== "unlocked_portal") &&
+        (captiveStatus !== "not_captive") &&
+        (captiveStatus !== "clear")) {
+        sendTelemetry({reason: STUDY_ERROR_CAPTIVE_PORTAL_FAILED});
+        throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_FAILED);
     }
 
+    // After we've determine that we are online, run the fetch test
+    await fetchTest();
+
     // Send a ping to indicate the start of the measurement
-    measurementID = uuidv4();
     sendTelemetry({reason: STUDY_START});
 
     let nameservers_ipv4 = await readNameservers();
@@ -317,7 +421,50 @@ async function runMeasurement() {
     let payload = {reason: STUDY_MEASUREMENT_COMPLETED};
     payload.dnsData = dnsData;
     payload.dnsAttempts = dnsAttempts;
+
+    // Run the fetch test one more time before submitting our measurements
+    await fetchTest();
+
+    // If we have passed the XHR test a second time, submit our measurements
     sendTelemetry(payload);
 }
 
-runMeasurement();
+/**
+ * Entry point for our addon.
+ */
+async function main() {
+    measurementID = uuidv4();
+
+    // If we can't upload telemetry. don't run the addon
+    let canUpload = await browser.telemetry.canUpload();
+    if (!canUpload) {
+        throw new Error(STUDY_ERROR_TELEMETRY_CANT_UPLOAD);
+    }
+
+    // Use the captive portal API to determine if we have Internet connectivity.
+    // If we already have connectivity, run the measurement.
+    // If not, wait until we get connectivity to run it.
+    let captiveStatus;
+    try {
+        captiveStatus = await browser.captivePortal.getState();
+    } catch(e) {
+        sendTelemetry({reason: STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED});
+        throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED);
+    }
+
+
+    // Possible states for browser.captivePortal.getState():
+    // unknown, not_captive, unlocked_portal, or locked_portal.
+    if ((captiveStatus === "unlocked_portal") ||
+        (captiveStatus === "not_captive")) {
+        await runMeasurement({status: captiveStatus});
+        return;
+    }
+
+    browser.captivePortal.onConnectivityAvailable.addListener(function listener(details) {
+        browser.captivePortal.onConnectivityAvailable.removeListener(listener);
+        runMeasurement(details);
+    });
+}
+
+main();

@@ -9,11 +9,7 @@ const { ExtensionUtils } = ChromeUtils.import(
 const { ExtensionError } = ExtensionUtils;
 
 const MAC_RESOLVCONF_PATH = "/etc/resolv.conf";
-const WIN_REGISTRY_TCPIP_PATH = "SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters";
-const WIN_REGISTRY_NAMESERVER_KEY = "DhcpNameServer";
-
-const STUDY_ERROR_NAMESERVERS_FILE_MAC = "STUDY_ERROR_NAMESERVERS_FILE_MAC";
-const STUDY_ERROR_NAMESERVERS_FILE_WIN = "STUDY_ERROR_NAMESERVERS_FILE_WIN";
+const STUDY_ERROR_NAMESERVERS_FILE = "STUDY_ERROR_NAMESERVERS_FILE";
 
 var resolvconf = class resolvconf extends ExtensionAPI {
     getAPI(context) {
@@ -30,7 +26,7 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                         try {
                             resolvconf_string = await OS.File.read(MAC_RESOLVCONF_PATH, { "encoding": "utf-8" });
                         } catch(e) {
-                            throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_MAC);
+                            throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE);
                         }
 
                         let lines = resolvconf_string.split("\n");
@@ -49,21 +45,15 @@ var resolvconf = class resolvconf extends ExtensionAPI {
                      */
                     async readNameserversWin() {
                         let nameservers = [];
-                        let rootKey = Ci.nsIWindowsRegKey.ROOT_KEY_LOCAL_MACHINE;
-                        let key = Cc["@mozilla.org/windows-registry-key;1"].createInstance(
-                            Ci.nsIWindowsRegKey
-                        );
-
                         try {
-                            key.open(rootKey, WIN_REGISTRY_TCPIP_PATH, Ci.nsIWindowsRegKey.ACCESS_READ);
-                            let nameservers_registry = key.readStringValue(WIN_REGISTRY_NAMESERVER_KEY);
-                            nameservers = nameservers_registry
-                                          .trim()
-                                          .match(/(?<=\s|^)[0-9.]+(?=\s|$)/g);
-                        } catch {
-                            throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE_WIN);
-                        } finally {
-                            key.close();
+                            let nameserversResult = Cc["@mozilla.org/network/network-link-service;1"].getService(Ci.nsINetworkLinkService).resolvers; 
+                            for (let nameserver of nameserversResult) {
+                                if (nameserver.family === 1 && nameserver.address) {
+                                    nameservers.push(nameserver.address);
+                                }
+                            }
+                        } catch(e) {
+                            throw new ExtensionError(STUDY_ERROR_NAMESERVERS_FILE);
                         }
                         return nameservers;
                     }

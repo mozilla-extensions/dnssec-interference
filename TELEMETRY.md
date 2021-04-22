@@ -49,6 +49,7 @@ record type, we also record how many times we attempted to query the record type
     "measurementID": "e76962aa-a28f-4893-b3bf-fa2e33789e5d",
     "reason": "STUDY_MEASUREMENT_END",
     "dnsData": {
+      "udpAWebExt": "127.0.0.1",
       "udpA": [1, 2, 3],
       "tcpA": [1, 2, 3],
       "udpADO": [1, 2, 3],
@@ -67,6 +68,7 @@ record type, we also record how many times we attempted to query the record type
       "tcpNEWTWO": [1, 2, 3]
     },
     "dnsAttempts": {
+      "udpAWebExt": 1,
       "udpA": 1,
       "tcpA": 1,
       "udpADO": 1,
@@ -127,6 +129,7 @@ sent. These pings take the following form:
                "STUDY_ERROR_UDP_PREMATURE_CLOSE",
                "STUDY_ERROR_UDP_BYTES_WRITTEN",
                "STUDY_ERROR_UDP_QUERY_TIMEOUT",
+               "STUDY_ERROR_UDP_WEBEXT",
                "STUDY_ERROR_TCP_MISC",
                "STUDY_ERROR_TCP_ENCODE",
                "STUDY_ERROR_TCP_NETWORK_TIMEOUT",
@@ -137,9 +140,13 @@ sent. These pings take the following form:
                "STUDY_ERROR_TCP_QUERY_TIMEOUT",
                "STUDY_ERROR_NAMESERVERS_OS_NOT_SUPPORTED",
                "STUDY_ERROR_NAMESERVERS_NOT_FOUND",
+               "STUDY_ERROR_NAMESERVERS_INVALID_ADDR",
                "STUDY_ERROR_NAMESERVERS_MISC",
-               "STUDY_ERROR_NAMESERVERS_FILE_MAC",
-               "STUDY_ERROR_NAMESERVERS_FILE_WIN"), // One of these values
+               "STUDY_ERROR_NAMESERVERS_FILE",
+               "STUDY_ERROR_CAPTIVE_PORTAL_FAILED",
+               "STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED",
+               "STUDY_ERROR_FETCH_FAILED",
+               "STUDY_ERROR_FETCH_NOT_MATCHED"), // One of these values
     "errorAttempt": 1,
     "errorRRTYPE": "A"
   }

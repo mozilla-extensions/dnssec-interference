@@ -12,7 +12,10 @@
     },
 
     "permissions": [
-        "telemetry"
+        "telemetry",
+        "dns",
+        "captivePortal",
+        "https://dnssec-experiment-moz.net/"
     ],
 
     "background": {
