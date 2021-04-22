@@ -145,6 +145,7 @@ sent. These pings take the following form:
                "STUDY_ERROR_NAMESERVERS_FILE",
                "STUDY_ERROR_CAPTIVE_PORTAL_FAILED",
                "STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED",
+               "STUDY_ERROR_FETCH_FAILED",
                "STUDY_ERROR_FETCH_NOT_MATCHED"), // One of these values
     "errorAttempt": 1,
     "errorRRTYPE": "A"
