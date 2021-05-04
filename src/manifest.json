@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "DNSSEC Interference Study",
     "description": "Mozilla addon that measures rates of DNSSEC interference by middleboxes",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "hidden": true,
 
     "applications": {
