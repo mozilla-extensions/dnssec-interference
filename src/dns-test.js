@@ -91,7 +91,7 @@ function encodeUDPQuery(domain, rrtype, dnssec_ok) {
             type: 'query',
             // Generate a random transaction ID between 0 and 65535
             id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED,
+            flags: DNS_PACKET.RECURSION_DESIRED | DNS_PACKET.CHECKING_DISABLED,
             questions: [{ type: rrtype, name: domain }],
             additionals: [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE, flags: DNS_PACKET.DNSSEC_OK }]
         });
@@ -118,7 +118,7 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok) {
             type: 'query',
             // Generate a random transaction ID between 0 and 65535
             id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED,
+            flags: DNS_PACKET.RECURSION_DESIRED | DNS_PACKET.CHECKING_DISABLED,
             questions: [{ type: rrtype, name: domain }],
             additionals: [{ type: 'OPT', name: '.', flags: DNS_PACKET.DNSSEC_OK }]
         });
