@@ -45,6 +45,7 @@ var dnsData = {
     udpAWebExt:   [],
     udpA:         [],
     udpADO:       [],
+    udpADOCD:     [],
     udpRRSIG:     [],
     udpDNSKEY:    [],
     udpSMIMEA:    [],
@@ -53,6 +54,7 @@ var dnsData = {
     udpNEWTWO:    [],
     tcpA:         [],
     tcpADO:       [],
+    tcpADOCD:     [],
     tcpRRSIG:     [],
     tcpDNSKEY:    [],
     tcpSMIMEA:    [],
@@ -65,6 +67,7 @@ var dnsAttempts = {
     udpAWebExt: 0,
     udpA:       0,
     udpADO:     0,
+    udpADOCD:   0,
     udpRRSIG:   0,
     udpDNSKEY:  0,
     udpSMIMEA:  0,
@@ -73,6 +76,7 @@ var dnsAttempts = {
     udpNEWTWO:  0,
     tcpA:       0,
     tcpADO:     0,
+    tcpADOCD:   0,
     tcpRRSIG:   0,
     tcpDNSKEY:  0,
     tcpSMIMEA:  0,
@@ -84,54 +88,57 @@ var dnsAttempts = {
 /**
  * Encode a DNS query to be sent over a UDP socket
  */
-function encodeUDPQuery(domain, rrtype, dnssec_ok) {
+function encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
     let buf;
-    if (dnssec_ok) {
-        buf = DNS_PACKET.encode({
-            type: 'query',
-            // Generate a random transaction ID between 0 and 65535
-            id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED | DNS_PACKET.CHECKING_DISABLED,
-            questions: [{ type: rrtype, name: domain }],
-            additionals: [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE, flags: DNS_PACKET.DNSSEC_OK }]
-        });
-    } else {
-        buf = DNS_PACKET.encode({
-            type: 'query',
-            // Generate a random transaction ID between 0 and 65535
-            id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED,
-            questions: [{ type: rrtype, name: domain }],
-            additionals: [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE }]
-        });
+    let type = 'query';
+    let id = Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID;    // Generate a random transaction ID between 0 and 65535
+    let flags = DNS_PACKET.RECURSION_DESIRED;
+    let questions = [{ type: rrtype, name: domain }];
+    let additionals = [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE }];
+    
+    if (checking_disabled) {
+        flags = flags | DNS_PACKET.CHECKING_DISABLED;
     }
+    if (dnssec_ok) {
+        additionals = [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE, flags: DNS_PACKET.DNSSEC_OK }];
+    }
+
+    buf = DNS_PACKET.encode({
+        type: type,
+        id: id,
+        flags: flags,
+        questions: questions,
+        additionals: additionals
+    });
     return buf
 }
 
 /**
  * Encode a DNS query to be sent over a TCP socket
  */
-function encodeTCPQuery(domain, rrtype, dnssec_ok) {
+function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
     let buf;
-    if (dnssec_ok) {
-        buf = DNS_PACKET.streamEncode({
-            type: 'query',
-            // Generate a random transaction ID between 0 and 65535
-            id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED | DNS_PACKET.CHECKING_DISABLED,
-            questions: [{ type: rrtype, name: domain }],
-            additionals: [{ type: 'OPT', name: '.', flags: DNS_PACKET.DNSSEC_OK }]
-        });
-    } else {
-        buf = DNS_PACKET.streamEncode({
-            type: 'query',
-            // Generate a random transaction ID between 0 and 65535
-            id: Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID,
-            flags: DNS_PACKET.RECURSION_DESIRED,
-            questions: [{ type: rrtype, name: domain }]
-        });
+    let type = 'query';
+    let id = Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID;    // Generate a random transaction ID between 0 and 65535
+    let flags = DNS_PACKET.RECURSION_DESIRED;
+    let questions = [{ type: rrtype, name: domain }];
+    let additionals = null;
+    
+    if (checking_disabled) {
+        flags = flags | DNS_PACKET.CHECKING_DISABLED;
     }
-    return buf;
+    if (dnssec_ok) {
+        additionals = [{ type: 'OPT', name: '.', flags: DNS_PACKET.DNSSEC_OK }];
+    }
+
+    buf = DNS_PACKET.streamEncode({
+        type: type,
+        id: id,
+        flags: flags,
+        questions: questions,
+        additionals: additionals
+    });
+    return buf
 }
 
 /**
@@ -192,7 +199,7 @@ async function sendUDPWebExtQuery(domain) {
  * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT 
  * (5000 ms).
  */
-async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok) {
+async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
     let queryBuf;
     try {
         queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok);
@@ -201,14 +208,15 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok) {
         throw new Error(STUDY_ERROR_UDP_ENCODE);
     }
 
-    let key;
-    let errorKey;
+    let key = "udp" + rrtype;
+    let errorKey = rrtype;
     if (dnssec_ok) {
-        key = "udp" + rrtype + "DO"; 
-        errorKey = rrtype + "DO";
-    } else {
-        key = "udp" + rrtype;
-        errorKey = rrtype;
+        key = key + "DO";
+        errorKey = errorKey + "DO";
+    }
+    if (checking_disabled) {
+        key = key + "CD";
+        errorKey = errorKey + "CD";
     }
 
     for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
@@ -243,7 +251,7 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok) {
  * Send a DNS query over TCP, re-transmitting to another nameserver if we 
  * fail to receive a response. We let TCP handle re-transmissions.
  */
-async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok) {
+async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
     let queryBuf;
     try {
         queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok);
@@ -252,16 +260,17 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok) {
         throw new Error(STUDY_ERROR_TCP_ENCODE);
     }
 
-    let key;
-    let errorKey;
+    let key = "tcp" + rrtype;
+    let errorKey = rrtype;
     if (dnssec_ok) {
-        key = "tcp" + rrtype + "DO"; 
-        errorKey = rrtype + "DO";
-    } else {
-        key = "tcp" + rrtype;
-        errorKey = rrtype;
+        key = key + "DO";
+        errorKey = errorKey + "DO";
     }
-
+    if (checking_disabled) {
+        key = key + "CD";
+        errorKey = errorKey + "CD";
+    }
+    
     for (let nameserver of nameservers) {
         try {
             dnsAttempts[key] += 1;
@@ -345,17 +354,23 @@ async function sendQueries(nameservers_ipv4) {
             await sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
             await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         } else if (rrtype == 'A') {
-            // First send queries using the WebExtensions dns.resolve API as a baseline
+            // First, send queries using the WebExtensions dns.resolve API as a baseline
             await sendUDPWebExtQuery(A_WEBEXT_DOMAIN_NAME);
 
-            // Then send queries using our experimental APIs with the DNSSEC OK bit, then without
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true);
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
+            // Second, send queries using our experimental APIs with DO=0 and CD=0
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
+            
+            // Third, send queries using our experimental APIs with DO=1 and CD=0
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, false);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, false);
+            
+            // Fourth, send queries using our experimental APIs with DO=1 and CD=1
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, true);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, true);
         } else {
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
         }
     }
 }
