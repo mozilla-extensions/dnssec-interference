@@ -8,7 +8,7 @@ const A_WEBEXT_DOMAIN_NAME = "webext.dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
 const HTTPS_DOMAIN_NAME = "httpssvc.dnssec-experiment-moz.net";
 
-const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO'];
+const RRTYPES = ['A', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO', 'NEWTHREE'];
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
 const STUDY_START = "STUDY_START";
@@ -52,6 +52,7 @@ var dnsData = {
     udpHTTPS:     [],
     udpNEWONE:    [],
     udpNEWTWO:    [],
+    udpNEWTHREE:  [],
     tcpA:         [],
     tcpADO:       [],
     tcpADOCD:     [],
@@ -60,29 +61,32 @@ var dnsData = {
     tcpSMIMEA:    [],
     tcpHTTPS:     [],
     tcpNEWONE:    [],
-    tcpNEWTWO:    []
+    tcpNEWTWO:    [],
+    tcpNEWTHREE:  []
 };
 
 var dnsAttempts = {
-    udpAWebExt: 0,
-    udpA:       0,
-    udpADO:     0,
-    udpADOCD:   0,
-    udpRRSIG:   0,
-    udpDNSKEY:  0,
-    udpSMIMEA:  0,
-    udpHTTPS:   0,
-    udpNEWONE:  0,
-    udpNEWTWO:  0,
-    tcpA:       0,
-    tcpADO:     0,
-    tcpADOCD:   0,
-    tcpRRSIG:   0,
-    tcpDNSKEY:  0,
-    tcpSMIMEA:  0,
-    tcpHTTPS:   0,
-    tcpNEWONE:  0,
-    tcpNEWTWO:  0
+    udpAWebExt:  0,
+    udpA:        0,
+    udpADO:      0,
+    udpADOCD:    0,
+    udpRRSIG:    0,
+    udpDNSKEY:   0,
+    udpSMIMEA:   0,
+    udpHTTPS:    0,
+    udpNEWONE:   0,
+    udpNEWTWO:   0,
+    udpNEWTHREE: 0,
+    tcpA:        0,
+    tcpADO:      0,
+    tcpADOCD:    0,
+    tcpRRSIG:    0,
+    tcpDNSKEY:   0,
+    tcpSMIMEA:   0,
+    tcpHTTPS:    0,
+    tcpNEWONE:   0,
+    tcpNEWTWO:   0,
+    tcpNEWTHREE: 0
 };
 
 /**
