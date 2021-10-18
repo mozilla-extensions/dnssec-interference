@@ -206,7 +206,7 @@ async function sendUDPWebExtQuery(domain) {
 async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
     let queryBuf;
     try {
-        queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok);
+        queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_UDP_ENCODE});
         throw new Error(STUDY_ERROR_UDP_ENCODE);
@@ -258,7 +258,7 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
 async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
     let queryBuf;
     try {
-        queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok);
+        queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_TCP_ENCODE});
         throw new Error(STUDY_ERROR_TCP_ENCODE);
