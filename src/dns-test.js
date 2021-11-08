@@ -44,6 +44,7 @@ var measurementID;
 var dnsData = {
     udpAWebExt:   [],
     udpA:         [],
+    udpACD:       [],
     udpADO:       [],
     udpADOCD:     [],
     udpRRSIG:     [],
@@ -54,6 +55,7 @@ var dnsData = {
     udpNEWTWO:    [],
     udpNEWTHREE:  [],
     tcpA:         [],
+    tcpACD:       [],
     tcpADO:       [],
     tcpADOCD:     [],
     tcpRRSIG:     [],
@@ -68,6 +70,7 @@ var dnsData = {
 var dnsAttempts = {
     udpAWebExt:  0,
     udpA:        0,
+    udpACD:      0,
     udpADO:      0,
     udpADOCD:    0,
     udpRRSIG:    0,
@@ -78,6 +81,7 @@ var dnsAttempts = {
     udpNEWTWO:   0,
     udpNEWTHREE: 0,
     tcpA:        0,
+    tcpACD:      0,
     tcpADO:      0,
     tcpADOCD:    0,
     tcpRRSIG:    0,
@@ -177,11 +181,10 @@ async function sendUDPWebExtQuery(domain) {
     let key = "udpAWebExt";
     let errorKey = "AWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
-    let randomDomain = createRandomDomain(domain);
 
     try {
         dnsAttempts[key] += 1
-        let response = await browser.dns.resolve(randomDomain, flags);
+        let response = await browser.dns.resolve(domain, flags);
         // If we don't already have a response saved in dnsData, save this one
         if (dnsData[key].length == 0) {
             dnsData[key] = response.addresses;
@@ -364,12 +367,16 @@ async function sendQueries(nameservers_ipv4) {
             // Second, send queries using our experimental APIs with DO=0 and CD=0
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
             await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
+
+            // Third, send queries using our experimental APIs with DO=0 and CD=1
+            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, true);
+            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, true);
             
-            // Third, send queries using our experimental APIs with DO=1 and CD=0
+            // Fourth, send queries using our experimental APIs with DO=1 and CD=0
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, false);
             await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, false);
             
-            // Fourth, send queries using our experimental APIs with DO=1 and CD=1
+            // Fifth, send queries using our experimental APIs with DO=1 and CD=1
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, true);
             await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, true, true);
         } else {
