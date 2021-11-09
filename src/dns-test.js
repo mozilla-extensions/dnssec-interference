@@ -54,6 +54,7 @@ var dnsData = {
     udpNEWONE:    [],
     udpNEWTWO:    [],
     udpNEWTHREE:  [],
+    udpNEWFOUR:   [],
     tcpA:         [],
     tcpACD:       [],
     tcpADO:       [],
@@ -64,7 +65,8 @@ var dnsData = {
     tcpHTTPS:     [],
     tcpNEWONE:    [],
     tcpNEWTWO:    [],
-    tcpNEWTHREE:  []
+    tcpNEWTHREE:  [],
+    tcpNEWFOUR:   []
 };
 
 var dnsAttempts = {
@@ -80,6 +82,7 @@ var dnsAttempts = {
     udpNEWONE:   0,
     udpNEWTWO:   0,
     udpNEWTHREE: 0,
+    udpNEWFOUR:  0,
     tcpA:        0,
     tcpACD:      0,
     tcpADO:      0,
@@ -90,7 +93,8 @@ var dnsAttempts = {
     tcpHTTPS:    0,
     tcpNEWONE:   0,
     tcpNEWTWO:   0,
-    tcpNEWTHREE: 0
+    tcpNEWTHREE: 0,
+    tcpNEWFOUR:  0
 };
 
 /**
