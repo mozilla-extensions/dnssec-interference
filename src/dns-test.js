@@ -154,21 +154,6 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
 }
 
 /**
- * Generate a random sub-domain under a domain name we control to query using 
- * dns.resolve()
- */
-function createRandomDomain(domain) {
-    // Generate random values
-    let randomValues = new Uint8Array(16);
-    crypto.getRandomValues(randomValues);
-
-    // Create a random sub-domain by converting each value to a hex string and joining the resulting strings
-    let subdomain = Array.from(randomValues, x => x.toString(16).padStart(2, "0")).join("")
-    let randomDomain = subdomain + '.' + domain;
-    return randomDomain;
-}
-
-/**
  * Send a DNS query for an A record over UDP using the WebExtensions
  * dns.resolve() API
  *
