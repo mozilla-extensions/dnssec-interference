@@ -52,6 +52,12 @@ record type, we also record how many times we attempted to query the record type
       "udpAWebExt": "127.0.0.1",
       "udpA": [1, 2, 3],
       "tcpA": [1, 2, 3],
+      "udpACD": [1, 2, 3],
+      "tcpACD": [1, 2, 3],
+      "udpADO": [1, 2, 3],
+      "tcpADO": [1, 2, 3],
+      "udpADOCD": [1, 2, 3],
+      "tcpADOCD": [1, 2, 3],
       "udpADO": [1, 2, 3],
       "tcpADO": [1, 2, 3],
       "udpRRSIG": [1, 2, 3],
@@ -65,14 +71,22 @@ record type, we also record how many times we attempted to query the record type
       "udpNEWONE": [1, 2, 3],
       "tcpNEWONE": [1, 2, 3],
       "udpNEWTWO": [1, 2, 3],
-      "tcpNEWTWO": [1, 2, 3]
+      "tcpNEWTWO": [1, 2, 3],
+      "udpNEWTHREE": [1, 2, 3],
+      "tcpNEWTHREE": [1, 2, 3],
+      "udpNEWFOUR": [1, 2, 3],
+      "tcpNEWFOUR": [1, 2, 3]
     },
     "dnsAttempts": {
       "udpAWebExt": 1,
       "udpA": 1,
       "tcpA": 1,
+      "udpACD": 1,
+      "tcpACD": 1,
       "udpADO": 1,
       "tcpADO": 1,
+      "udpADOCD": 1,
+      "tcpADOCD": 1,
       "udpRRSIG": 1,
       "tcpRRSIG": 1,
       "udpDNSKEY": 1,
@@ -84,7 +98,11 @@ record type, we also record how many times we attempted to query the record type
       "udpNEWONE": 1,
       "tcpNEWONE": 1,
       "udpNEWTWO": 1,
-      "tcpNEWTWO": 1
+      "tcpNEWTWO": 1,
+      "udpNEWTHREE": 1,
+      "tcpNEWTHREE": 1,
+      "udpNEWFOUR": 1,
+      "tcpNEWFOUR": 1
     }
   }
 }
