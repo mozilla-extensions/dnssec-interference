@@ -29,12 +29,17 @@ To understand the extent to which network middleboxes between clients and recurs
 At a high-level, we will first serve the above record types from domain names in a zone that we control (e.g., `*.dnssec-experiment-moz.net`). We will then induce Firefox clients to request the following record types from domain names in our zone over UDP and TCP:
 
 - A
+- A (w/ DO=0, CD=1)
+- A (w/ DO=1, CD=0)
+- A (w/ DO=1, CD=1)
 - RRSIG
 - DNSKEY
 - SMIMEA
 - HTTPS
 - NEWONE (a non-standard record type that we created)
 - NEWTWO (another non-standard record type that we created)
+- NEWTHREE (another non-standard record type that we created)
+- NEWFOUR (another non-standard record type that we created)
 
 For UDP queries, we follow the default re-transmission behavior specified in [/etc/resolv.conf for Linux](https://www.man7.org/linux/man-pages/man5/resolv.conf.5.html). For TCP queries, we query nameservers in order of appearance and let TCP handle re-transmissions. Finally, we will check whether we got the expected responses (or any response at all). To run this study, we will deploy a privileged addon to a sample of Firefox desktop clients. Clients that have opted out of telemetry or participating in studies will not receive the addon.
 
