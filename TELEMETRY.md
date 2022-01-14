@@ -24,8 +24,10 @@ re-transmitting if necessary:
   - DNSKEY
   - SMIMEA
   - HTTPS
-  - NEWONE (a custom resource record type that we created for this study)
-  - NEWTWO (an additional custom resource record type that we created for this study)
+  - NEWONE (a non-standard record type that we created for this study; code point 66)
+  - NEWTWO (another non-standard record type that we created for this study; code point 65283)
+  - NEWTHREE (another non-standard record type that we created for this study; code point 67)
+  - NEWFOUR (another non-standard record type that we created for this study; code point 65284)
 
 - We wait for the DNS 
 responses and then encapsulate the raw bytes into a ping, excluding any IP or UDP headers. For each 
