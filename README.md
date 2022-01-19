@@ -49,11 +49,11 @@ If DNSSEC records are frequently dropped by network middleboxes, then Firefox cl
 ## Libraries
 Our addon utilizes the following Node.js modules:
 
-- [browserify](https://github.com/browserify/browserify.git)
-- [npm-run-all](https://github.com/mysticatea/npm-run-all.git)
-- [uuid](https://github.com/uuidjs/uuid.git)
-- [web-ext](https://github.com/mozilla/web-ext.git)
-- [mozilla/dns-packet](https://github.com/mozilla/dns-packet.git)
+- [browserify](https://github.com/browserify/browserify)
+- [npm-run-all](https://github.com/mysticatea/npm-run-all)
+- [uuid](https://github.com/uuidjs/uuid)
+- [web-ext](https://github.com/mozilla/web-ext)
+- [mozilla/dns-packet](https://github.com/mozilla/dns-packet)
 
 ## Privacy Considerations
 To analyze the rate of network middlebox interference with DNSSEC records, we will [send DNS responses](https://github.com/mozilla-extensions/dnssec-interference/blob/master/TELEMETRY.md) to our telemetry system, rather than performing any analysis locally within the client’s browser. This would enable us to see the different ways that DNS responses are interfered with without relying on whatever analysis logic we bake into our study addon.
