@@ -49,10 +49,10 @@ If DNSSEC records are frequently dropped by network middleboxes, then Firefox cl
 ## Libraries
 Our addon utilizes the following Node.js modules:
 
-- browserify [(^16.5.2)](https://github.com/browserify/browserify/tree/v16.5.2)
-- npm-run-all [(^4.1.5)](https://github.com/mysticatea/npm-run-all/tree/v4.1.5)
-- uuid [(^8.3.0)](https://github.com/uuidjs/uuid/tree/v8.3.0)
-- web-ext [(^5.3.0)](https://github.com/mozilla/web-ext/tree/5.3.0)
+- [browserify](https://github.com/browserify/browserify.git)
+- [npm-run-all](https://github.com/mysticatea/npm-run-all.git)
+- [uuid](https://github.com/uuidjs/uuid.git)
+- [web-ext](https://github.com/mozilla/web-ext.git)
 - [mozilla/dns-packet](https://github.com/mozilla/dns-packet.git)
 
 ## Privacy Considerations
