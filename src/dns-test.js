@@ -4,7 +4,6 @@ const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
-const A_WEBEXT_DOMAIN_NAME = "webext.dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
 const HTTPS_DOMAIN_NAME = "httpssvc.dnssec-experiment-moz.net";
 
@@ -351,7 +350,7 @@ async function sendQueries(nameservers_ipv4) {
             await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false);
         } else if (rrtype == 'A') {
             // First, send queries using the WebExtensions dns.resolve API as a baseline
-            await sendUDPWebExtQuery(A_WEBEXT_DOMAIN_NAME);
+            await sendUDPWebExtQuery(APEX_DOMAIN_NAME);
 
             // Second, send queries using our experimental APIs with DO=0 and CD=0
             await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
