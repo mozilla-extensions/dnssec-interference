@@ -53,7 +53,7 @@ Our addon utilizes the following Node.js modules:
 - [npm-run-all](https://github.com/mysticatea/npm-run-all)
 - [uuid](https://github.com/uuidjs/uuid)
 - [web-ext](https://github.com/mozilla/web-ext)
-- [mozilla/dns-packet](https://github.com/mozilla/dns-packet)
+- [ahounsel/dns-packet](https://github.com/ahounsel/dns-packet)
 
 ## Privacy Considerations
 To analyze the rate of network middlebox interference with DNSSEC records, we will [send DNS responses](https://github.com/mozilla-extensions/dnssec-interference/blob/master/TELEMETRY.md) to our telemetry system, rather than performing any analysis locally within the client’s browser. This would enable us to see the different ways that DNS responses are interfered with without relying on whatever analysis logic we bake into our study addon.
