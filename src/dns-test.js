@@ -221,6 +221,14 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
 
     let key = "udp" + rrtype;
     let errorKey = rrtype;
+    if (dnssec_ok) {
+        key = key + "DO";
+        errorKey = errorKey + "DO";
+    }
+    if (checking_disabled) {
+        key = key + "CD";
+        errorKey = errorKey + "CD";
+    }
 
     for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
         for (let nameserver of nameservers) {
@@ -265,6 +273,14 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
 
     let key = "tcp" + rrtype;
     let errorKey = rrtype;
+    if (dnssec_ok) {
+        key = key + "DO";
+        errorKey = errorKey + "DO";
+    }
+    if (checking_disabled) {
+        key = key + "CD";
+        errorKey = errorKey + "CD";
+    }
     
     for (let nameserver of nameservers) {
         try {
