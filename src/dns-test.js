@@ -7,9 +7,22 @@ const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
 const HTTPS_DOMAIN_NAME = "httpssvc.dnssec-experiment-moz.net";
 
-const A_RRTYPE = 'A';
-const QUERIES = ['AWebExt', 'A', 'ACD', 'ADO', 'ADOCD', 'RRSIG', 'DNSKEY', 'SMIMEA', 'HTTPS', 'NEWONE', 'NEWTWO', 'NEWTHREE', 'NEWFOUR']
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
+
+const COMMON_QUERIES = [
+    { rrtype: "SMIMEA", domain: SMIMEA_DOMAIN_NAME, dnnssec_ok: false, checking_disabled: false },
+    { rrtype: "HTTPS", domain: HTTPS_DOMAIN_NAME, dnnssec_ok: false, checking_disabled: false },
+    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: true },
+    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: true, checking_disabled: false },
+    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: true, checking_disabled: true },
+    { rrtype: "DNSKEY", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "RRSIG", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWONE", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWTWO", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWTHREE", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWFOUR", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false }
+];
 
 const STUDY_START = "STUDY_START";
 const STUDY_MEASUREMENT_COMPLETED = "STUDY_MEASUREMENT_COMPLETED";
@@ -109,7 +122,6 @@ function shuffleQueries(queries) {
         currentIndex--;
         [queries[currentIndex], queries[randomIndex]] = [queries[randomIndex], queries[currentIndex]];
     }
-    return queries;
 }
 
 /**
@@ -357,40 +369,21 @@ async function readNameservers() {
  * UDP and TCP.
  */
 async function sendQueries(nameservers_ipv4) {
-    let randomQueries = shuffleQueries(QUERIES.slice());
-    for (let rrtype of randomQueries) {
-        if (rrtype == 'AWebExt') {
-            // Send query over UDP for our A record using the WebExtensions dns.resolve API as a baseline
-            await sendUDPWebExtQuery(APEX_DOMAIN_NAME);
-        } else if (rrtype == 'A') {
-            // Send queries over UDP and TCP for our A record using our experimental APIs with DO=0 and CD=0
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, false, false);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, false, false);
-        } else if (rrtype == 'ACD') {
-            // Send queries over UDP and TCP for our A record using our experimental APIs with DO=0 and CD=1
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, false, true);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, false, true);
-        } else if (rrtype == 'ADO') {
-            // Send queries over UDP and TCP for our A record using our experimental APIs with DO=1 and CD=0
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, true, false);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, true, false);
-        } else if (rrtype == 'ADOCD') {
-            // Send queries over UDP and TCP for our A record using our experimental APIs with DO=1 and CD=1
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, true, true);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, A_RRTYPE, true, true);
-        } else if (rrtype == 'SMIMEA') {
-            // Send queries over UDP and TCP for our SMIMEA record using our experimental APIs with DO=0 and CD=0
-            await sendUDPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
-            await sendTCPQuery(SMIMEA_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
-        } else if (rrtype == 'HTTPS') {
-            // Send queries over UDP and TCP for our HTTPS record using our experimental APIs with DO=0 and CD=0
-            await sendUDPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
-            await sendTCPQuery(HTTPS_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
-        } else {
-            // Send queries over UDP and TCP for a record we host using our experimental APIs with DO=0 and CD=0
-            await sendUDPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
-            await sendTCPQuery(APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, false, false);
-        }
+    // Add the query for our A record that uses the dns.resolve() WebExtensions API
+    let queries = [];
+    queries.push(() => sendUDPWebExtQuery(APEX_DOMAIN_NAME));
+
+    // Add the remaining queries that use the browser's internal socket APIs
+    for (let { rrtype, domain, dnssec_ok, checking_disabled } of COMMON_QUERIES) {
+        let args = [domain, nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
+        queries.push(() => sendUDPQuery(...args));
+        queries.push(() => sendTCPQuery(...args));
+    }
+
+    // Shuffle the order of the list of queries, and then send the queries
+    shuffleQueries(queries);
+    for (let sendQuery of queries) {
+        await sendQuery();
     }
 }
 
