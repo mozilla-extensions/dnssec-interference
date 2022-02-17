@@ -369,7 +369,7 @@ async function readNameservers() {
  * UDP and TCP.
  */
 async function sendQueries(nameservers_ipv4) {
-    // Add the query for our A record that uses the dns.resolve() WebExtensions API
+    // Add a query for our A record that uses the WebExtensions dns.resolve API as a baseline
     let queries = [];
     queries.push(() => sendUDPWebExtQuery(APEX_DOMAIN_NAME));
 
