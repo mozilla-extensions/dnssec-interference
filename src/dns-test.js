@@ -111,16 +111,17 @@ var dnsAttempts = {
 };
 
 /**
- * Shuffle the order of DNS queries we issue
+ * Shuffle an array
+ * Borrowed from https://stackoverflow.com/a/2450976
  */
-function shuffleQueries(queries) {
-    let currentIndex = queries.length;
+function shuffleArray(array) {
+    let currentIndex = array.length;
     let randomIndex;
 
     while (currentIndex != 0) {
         randomIndex = Math.floor(Math.random() * currentIndex);
         currentIndex--;
-        [queries[currentIndex], queries[randomIndex]] = [queries[randomIndex], queries[currentIndex]];
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
     }
 }
 
@@ -380,8 +381,8 @@ async function sendQueries(nameservers_ipv4) {
         queries.push(() => sendTCPQuery(...args));
     }
 
-    // Shuffle the order of the list of queries, and then send the queries
-    shuffleQueries(queries);
+    // Shuffle the order of the array of queries, and then send the queries
+    shuffleArray(queries);
     for (let sendQuery of queries) {
         await sendQuery();
     }
