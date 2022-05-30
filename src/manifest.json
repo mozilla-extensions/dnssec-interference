@@ -12,6 +12,7 @@
     },
 
     "permissions": [
+        "mozillaAddons",
         "telemetry",
         "dns",
         "captivePortal",
