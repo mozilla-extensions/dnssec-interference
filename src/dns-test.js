@@ -11,7 +11,7 @@ const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let 
 
 const COMMON_QUERIES = [
     { rrtype: "SMIMEA", prefix: SMIMEA_PREFIX, dnnssec_ok: false, checking_disabled: false },
-    { rrtype: "HTTPS", domain: HTTPS_PREFIX, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "HTTPS", prefix: HTTPS_PREFIX, dnssec_ok: false, checking_disabled: false },
     { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false },
     { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: true },
     { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: false },
