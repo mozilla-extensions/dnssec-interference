@@ -18,7 +18,6 @@
         "captivePortal",
         "https://dnssec-experiment-moz.net/"
     ],
-
     "background": {
         "scripts": ["background.js"]
     },

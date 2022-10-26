@@ -4,24 +4,24 @@ const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
-const SMIMEA_DOMAIN_NAME = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15._smimecert.dnssec-experiment-moz.net";
-const HTTPS_DOMAIN_NAME = "httpssvc.dnssec-experiment-moz.net";
+const SMIMEA_PREFIX = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15.";
+const HTTPS_PREFIX = "httpssvc.";
 
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
 const COMMON_QUERIES = [
-    { rrtype: "SMIMEA", domain: SMIMEA_DOMAIN_NAME, dnnssec_ok: false, checking_disabled: false },
-    { rrtype: "HTTPS", domain: HTTPS_DOMAIN_NAME, dnnssec_ok: false, checking_disabled: false },
-    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: true },
-    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: true, checking_disabled: false },
-    { rrtype: "A", domain: APEX_DOMAIN_NAME, dnssec_ok: true, checking_disabled: true },
-    { rrtype: "DNSKEY", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "RRSIG", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWONE", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWTWO", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWTHREE", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWFOUR", domain: APEX_DOMAIN_NAME, dnssec_ok: false, checking_disabled: false }
+    { rrtype: "SMIMEA", prefix: SMIMEA_PREFIX, dnnssec_ok: false, checking_disabled: false },
+    { rrtype: "HTTPS", domain: HTTPS_PREFIX, dnssec_ok: false, checking_disabled: false },
+    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: true },
+    { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: false },
+    { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: true },
+    { rrtype: "DNSKEY", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "RRSIG", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWONE", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWTWO", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWTHREE", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "NEWFOUR", prefix: "", dnssec_ok: false, checking_disabled: false }
 ];
 
 const STUDY_START = "STUDY_START";
@@ -229,6 +229,7 @@ async function sendUDPWebExtQuery(domain) {
  * (5000 ms).
  */
 async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
+    logMessage("UDP: " + rrtype + "? " + domain + " DO=" + dnssec_ok + " CD=" + checking_disabled);    
     let queryBuf;
     try {
         queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled);
@@ -281,6 +282,7 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
  * fail to receive a response. We let TCP handle re-transmissions.
  */
 async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
+    logMessage("TCP: " + rrtype + "? " + domain + " DO=" + dnssec_ok + " CD=" + checking_disabled);
     let queryBuf;
     try {
         queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled);
@@ -380,8 +382,8 @@ async function sendQueries(nameservers_ipv4) {
     queries.push(() => sendUDPWebExtQuery(APEX_DOMAIN_NAME));
 
     // Add the remaining queries that use the browser's internal socket APIs
-    for (let { rrtype, domain, dnssec_ok, checking_disabled } of COMMON_QUERIES) {
-        let args = [domain, nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
+    for (let { rrtype, prefix, dnssec_ok, checking_disabled } of COMMON_QUERIES) {
+        let args = [prefix + APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
         queries.push(() => sendUDPQuery(...args));
         queries.push(() => sendTCPQuery(...args));
     }
