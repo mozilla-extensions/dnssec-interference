@@ -110,6 +110,10 @@ var dnsAttempts = {
     tcpNEWFOUR:  0
 };
 
+function logMessage(m) {
+    console.log(m);
+}    
+    
 /**
  * Shuffle an array
  * Borrowed from https://stackoverflow.com/a/2450976
@@ -208,6 +212,7 @@ async function sendUDPWebExtQuery(domain) {
         }
         return;
     } catch(e) {
+        logMessage("DNS resolution failed " + e);
         let errorReason = STUDY_ERROR_UDP_WEBEXT;
         sendTelemetry({reason: errorReason,
                        errorRRTYPE: errorKey,
@@ -393,11 +398,16 @@ async function sendQueries(nameservers_ipv4) {
  * measurement, i.e. a browser session
  */
 function sendTelemetry(payload) {
+    logMessage("Sending telemetry");
+    logMessage(payload);
     payload.measurementID = measurementID;
     browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
 async function fetchTest() {
+    // TODO(ekr@rtfm.com): the test page is down
+    return;
+    
     let response;
     let responseText;
     try {
@@ -407,7 +417,6 @@ async function fetchTest() {
         sendTelemetry({reason: STUDY_ERROR_FETCH_FAILED});
         throw new Error(STUDY_ERROR_FETCH_FAILED);
     }
-
     if (responseText !== "Hello, world!\n") {
         sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
