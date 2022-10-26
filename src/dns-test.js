@@ -1,4 +1,4 @@
-/* global browser */ 
+/* global browser */
 const DNS_PACKET = require("dns-packet");
 const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
@@ -112,8 +112,8 @@ var dnsAttempts = {
 
 function logMessage(m) {
     console.log(m);
-}    
-    
+}
+
 /**
  * Shuffle an array
  * Borrowed from https://stackoverflow.com/a/2450976
@@ -139,7 +139,7 @@ function encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
     let flags = DNS_PACKET.RECURSION_DESIRED;
     let questions = [{ type: rrtype, name: domain }];
     let additionals = [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE }];
-    
+
     if (checking_disabled) {
         flags = flags | DNS_PACKET.CHECKING_DISABLED;
     }
@@ -167,7 +167,7 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
     let flags = DNS_PACKET.RECURSION_DESIRED;
     let questions = [{ type: rrtype, name: domain }];
     let additionals = null;
-    
+
     if (checking_disabled) {
         flags = flags | DNS_PACKET.CHECKING_DISABLED;
     }
@@ -194,8 +194,8 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
  * to experience the same issue with the internal UDP/TCP APIs because
  * they are not calling getaddrinfo().
  *
- * We let the underlying API handle re-transmissions and which nameserver is 
- * used. We make sure that DoH is not used and that A records are queried, 
+ * We let the underlying API handle re-transmissions and which nameserver is
+ * used. We make sure that DoH is not used and that A records are queried,
  * rather than AAAA.
  */
 async function sendUDPWebExtQuery(domain) {
@@ -221,11 +221,11 @@ async function sendUDPWebExtQuery(domain) {
 }
 
 /**
- * Send a DNS query over UDP, re-transmitting according to default 
+ * Send a DNS query over UDP, re-transmitting according to default
  * resolvconf behavior if we fail to receive a response.
  *
- * In short, we re-transmit at most RESOLVCONF_ATTEMPTS for each nameserver 
- * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT 
+ * In short, we re-transmit at most RESOLVCONF_ATTEMPTS for each nameserver
+ * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT
  * (5000 ms).
  */
 async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
@@ -277,7 +277,7 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
 }
 
 /**
- * Send a DNS query over TCP, re-transmitting to another nameserver if we 
+ * Send a DNS query over TCP, re-transmitting to another nameserver if we
  * fail to receive a response. We let TCP handle re-transmissions.
  */
 async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
@@ -299,7 +299,7 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
         key = key + "CD";
         errorKey = errorKey + "CD";
     }
-    
+
     for (let nameserver of nameservers) {
         try {
             dnsAttempts[key] += 1;
@@ -334,7 +334,7 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
  */
 async function readNameservers() {
     let nameservers = [];
-    try { 
+    try {
         let platform = await browser.runtime.getPlatformInfo();
         if (platform.os == "mac") {
             nameservers = await browser.experiments.resolvconf.readNameserversMac();
@@ -371,7 +371,7 @@ async function readNameservers() {
 }
 
 /**
- * For each RR type that we have a DNS record for, attempt to send queries over 
+ * For each RR type that we have a DNS record for, attempt to send queries over
  * UDP and TCP.
  */
 async function sendQueries(nameservers_ipv4) {
@@ -407,7 +407,7 @@ function sendTelemetry(payload) {
 async function fetchTest() {
     // TODO(ekr@rtfm.com): the test page is down
     return;
-    
+
     let responseText;
     try {
         response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
