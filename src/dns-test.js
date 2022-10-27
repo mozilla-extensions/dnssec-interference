@@ -6,6 +6,8 @@ const IP_REGEX = require("ip-regex");
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
 const SMIMEA_PREFIX = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15.";
 const HTTPS_PREFIX = "httpssvc.";
+const PER_CLIENT_PREFIX="pc.";
+
 
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
@@ -369,8 +371,23 @@ async function readNameservers() {
             throw new Error(STUDY_ERROR_NAMESERVERS_INVALID_ADDR);
         }
     }
+
+    logMessage("Nameservers: " + nameservers);
     return nameservers;
 }
+
+/* Compute the per-query slug */
+function computeSlug(rrtype, dnssec_ok, checking_disabled) {
+    let tmp = rrtype.toLowerCase();
+    if (dnssec_ok) {
+        tmp += "-do";
+    }
+    if (checking_disabled) {
+        tmp += "-cd";
+    }
+    return tmp;
+}
+
 
 /**
  * For each RR type that we have a DNS record for, attempt to send queries over
@@ -383,9 +400,18 @@ async function sendQueries(nameservers_ipv4) {
 
     // Add the remaining queries that use the browser's internal socket APIs
     for (let { rrtype, prefix, dnssec_ok, checking_disabled } of COMMON_QUERIES) {
+        // Queries where all clients look up the same domain
         let args = [prefix + APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
+
         queries.push(() => sendUDPQuery(...args));
         queries.push(() => sendTCPQuery(...args));
+
+        // Queries where all clients look up a different domain
+        let slug = computeSlug(rrtype, dnssec_ok, checking_disabled);
+        let args2 = [slug + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME,
+                     nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
+        queries.push(() => sendUDPQuery(...args2));
+        queries.push(() => sendTCPQuery(...args2));
     }
 
     // Shuffle the order of the array of queries, and then send the queries
