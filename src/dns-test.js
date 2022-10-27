@@ -380,11 +380,12 @@ async function readNameservers() {
 function computeSlug(rrtype, dnssec_ok, checking_disabled) {
     let tmp = rrtype.toLowerCase();
     if (dnssec_ok) {
-        tmp += "-do";
+        tmp += "do";
     }
     if (checking_disabled) {
-        tmp += "-cd";
+        tmp += "cd";
     }
+    tmp += "-" + measurementID;
     return tmp;
 }
 
@@ -401,17 +402,19 @@ async function sendQueries(nameservers_ipv4) {
     // Add the remaining queries that use the browser's internal socket APIs
     for (let { rrtype, prefix, dnssec_ok, checking_disabled } of COMMON_QUERIES) {
         // Queries where all clients look up the same domain
-        let args = [prefix + APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
+           let args = [prefix + APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
 
         queries.push(() => sendUDPQuery(...args));
         queries.push(() => sendTCPQuery(...args));
 
         // Queries where all clients look up a different domain
         let slug = computeSlug(rrtype, dnssec_ok, checking_disabled);
-        let args2 = [slug + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME,
+        let args_udp = [prefix + slug + "-udp." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME,
                      nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
-        queries.push(() => sendUDPQuery(...args2));
-        queries.push(() => sendTCPQuery(...args2));
+        queries.push(() => sendUDPQuery(...args_udp));
+        let args_tcp = [prefix + slug + "-tcp." + PER_CLIENT_PREFIX + prefix + APEX_DOMAIN_NAME,
+                     nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
+        queries.push(() => sendTCPQuery(...args_tcp));
     }
 
     // Shuffle the order of the array of queries, and then send the queries
