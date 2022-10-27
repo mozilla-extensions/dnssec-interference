@@ -409,10 +409,10 @@ async function sendQueries(nameservers_ipv4) {
 
         // Queries where all clients look up a different domain
         let slug = computeSlug(rrtype, dnssec_ok, checking_disabled);
-        let args_udp = [prefix + slug + "-udp." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME,
+        let args_udp = [prefix + "udp-" + slug  + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME,
                      nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
         queries.push(() => sendUDPQuery(...args_udp));
-        let args_tcp = [prefix + slug + "-tcp." + PER_CLIENT_PREFIX + prefix + APEX_DOMAIN_NAME,
+        let args_tcp = [prefix + "tcp-" + slug + "." + PER_CLIENT_PREFIX + prefix + APEX_DOMAIN_NAME,
                      nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
         queries.push(() => sendTCPQuery(...args_tcp));
     }
