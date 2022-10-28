@@ -15,6 +15,7 @@ const COMMON_QUERIES = [
     { rrtype: "SMIMEA", prefix: SMIMEA_PREFIX, dnssec_ok: false, checking_disabled: false },
     { rrtype: "HTTPS", prefix: HTTPS_PREFIX, dnssec_ok: false, checking_disabled: false },
     { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false, noedns0: true },    
     { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: true },
     { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: false },
     { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: true },
@@ -56,61 +57,9 @@ const UDP_PAYLOAD_SIZE = 4096;
 
 var measurementID;
 
-var dnsData = {
-    udpAWebExt:   [],
-    udpA:         [],
-    udpACD:       [],
-    udpADO:       [],
-    udpADOCD:     [],
-    udpRRSIG:     [],
-    udpDNSKEY:    [],
-    udpSMIMEA:    [],
-    udpHTTPS:     [],
-    udpNEWONE:    [],
-    udpNEWTWO:    [],
-    udpNEWTHREE:  [],
-    udpNEWFOUR:   [],
-    tcpA:         [],
-    tcpACD:       [],
-    tcpADO:       [],
-    tcpADOCD:     [],
-    tcpRRSIG:     [],
-    tcpDNSKEY:    [],
-    tcpSMIMEA:    [],
-    tcpHTTPS:     [],
-    tcpNEWONE:    [],
-    tcpNEWTWO:    [],
-    tcpNEWTHREE:  [],
-    tcpNEWFOUR:   []
-};
+var dnsData = {};
 
-var dnsAttempts = {
-    udpAWebExt:  0,
-    udpA:        0,
-    udpACD:      0,
-    udpADO:      0,
-    udpADOCD:    0,
-    udpRRSIG:    0,
-    udpDNSKEY:   0,
-    udpSMIMEA:   0,
-    udpHTTPS:    0,
-    udpNEWONE:   0,
-    udpNEWTWO:   0,
-    udpNEWTHREE: 0,
-    udpNEWFOUR:  0,
-    tcpA:        0,
-    tcpACD:      0,
-    tcpADO:      0,
-    tcpADOCD:    0,
-    tcpRRSIG:    0,
-    tcpDNSKEY:   0,
-    tcpSMIMEA:   0,
-    tcpHTTPS:    0,
-    tcpNEWONE:   0,
-    tcpNEWTWO:   0,
-    tcpNEWTHREE: 0,
-    tcpNEWFOUR:  0
-};
+var dnsAttempts = {};
 
 function logMessage(m) {
     console.log(m);
@@ -134,18 +83,19 @@ function shuffleArray(array) {
 /**
  * Encode a DNS query to be sent over a UDP socket
  */
-function encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
+function encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled, noedns0) {
     let buf;
     let type = 'query';
     let id = Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID;    // Generate a random transaction ID between 0 and 65535
     let flags = DNS_PACKET.RECURSION_DESIRED;
     let questions = [{ type: rrtype, name: domain }];
-    let additionals = [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE }];
+    let additionals = noedns0 ? [] : [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE }];
 
     if (checking_disabled) {
         flags = flags | DNS_PACKET.CHECKING_DISABLED;
     }
     if (dnssec_ok) {
+        // TODO(ekr@rtfm.com): Assert noedns0
         additionals = [{ type: 'OPT', name: '.', udpPayloadSize: UDP_PAYLOAD_SIZE, flags: DNS_PACKET.DNSSEC_OK }];
     }
 
@@ -202,14 +152,13 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
  */
 async function sendUDPWebExtQuery(domain) {
     let key = "udpAWebExt";
-    let errorKey = "AWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
 
     try {
         dnsAttempts[key] += 1
         let response = await browser.dns.resolve(domain, flags);
         // If we don't already have a response saved in dnsData, save this one
-        if (dnsData[key].length == 0) {
+        if (!dnsData[key] == 0) {
             dnsData[key] = response.addresses;
         }
         return;
@@ -217,7 +166,7 @@ async function sendUDPWebExtQuery(domain) {
         logMessage("DNS resolution failed " + e);
         let errorReason = STUDY_ERROR_UDP_WEBEXT;
         sendTelemetry({reason: errorReason,
-                       errorRRTYPE: errorKey,
+                       errorRRTYPE: key,
                        errorAttempt: dnsAttempts[key]});
     }
 }
@@ -230,25 +179,16 @@ async function sendUDPWebExtQuery(domain) {
  * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT
  * (5000 ms).
  */
-async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
-    logMessage("UDP: " + rrtype + "? " + domain + " DO=" + dnssec_ok + " CD=" + checking_disabled);    
+async function sendUDPQuery(key, domain, query, nameservers) {
+    let { rrtype, dnssec_ok, checking_disabled, noedns0 } = query;
+    
+    logMessage("UDP: " + rrtype + "? " + domain + " " + key);
     let queryBuf;
     try {
-        queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled);
+        queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled, noedns0);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_UDP_ENCODE});
         throw new Error(STUDY_ERROR_UDP_ENCODE);
-    }
-
-    let key = "udp" + rrtype;
-    let errorKey = rrtype;
-    if (dnssec_ok) {
-        key = key + "DO";
-        errorKey = errorKey + "DO";
-    }
-    if (checking_disabled) {
-        key = key + "CD";
-        errorKey = errorKey + "CD";
     }
 
     for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
@@ -258,7 +198,7 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
 
                 // If we don't already have a response saved in dnsData, save this one
-                if (dnsData[key].length == 0) {
+                if (!dnsData[key]) {
                     dnsData[key] = Array.from(responseBytes);
                 }
                 // If we didn't get an error, return.
@@ -272,7 +212,7 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
                     errorReason = STUDY_ERROR_UDP_MISC;
                 }
                 sendTelemetry({reason: errorReason,
-                               errorRRTYPE: errorKey,
+                               errorRRTYPE: key,
                                errorAttempt: dnsAttempts[key]});
             }
         }
@@ -283,8 +223,11 @@ async function sendUDPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
  * Send a DNS query over TCP, re-transmitting to another nameserver if we
  * fail to receive a response. We let TCP handle re-transmissions.
  */
-async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_disabled) {
-    logMessage("TCP: " + rrtype + "? " + domain + " DO=" + dnssec_ok + " CD=" + checking_disabled);
+async function sendTCPQuery(key, domain, query, nameservers) {
+    let { rrtype, dnssec_ok, checking_disabled, } = query;
+    
+    logMessage("TCP: " + rrtype + "? " + domain + " " + key);
+    
     let queryBuf;
     try {
         queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled);
@@ -293,24 +236,16 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
         throw new Error(STUDY_ERROR_TCP_ENCODE);
     }
 
-    let key = "tcp" + rrtype;
-    let errorKey = rrtype;
-    if (dnssec_ok) {
-        key = key + "DO";
-        errorKey = errorKey + "DO";
-    }
-    if (checking_disabled) {
-        key = key + "CD";
-        errorKey = errorKey + "CD";
-    }
-
     for (let nameserver of nameservers) {
         try {
+            if (!dnsAttempts[key]) {
+                dnsAttempts[key] = 0;
+            }
             dnsAttempts[key] += 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
 
             // If we don't already have a response saved in dnsData, save this one
-            if (dnsData[key].length == 0) {
+            if (!dnsData[key]) {
                 dnsData[key] = Array.from(responseBytes);
             }
             // If we didn't get an error, return.
@@ -324,7 +259,7 @@ async function sendTCPQuery(domain, nameservers, rrtype, dnssec_ok, checking_dis
                 errorReason = STUDY_ERROR_TCP_MISC;
             }
             sendTelemetry({reason: errorReason,
-                           errorRRTYPE: errorKey,
+                           errorRRTYPE: key,
                            errorAttempt: dnsAttempts[key]});
 
         }
@@ -376,16 +311,22 @@ async function readNameservers() {
     return nameservers;
 }
 
-/* Compute the per-query slug */
-function computeSlug(rrtype, dnssec_ok, checking_disabled) {
-    let tmp = rrtype.toLowerCase();
-    if (dnssec_ok) {
-        tmp += "do";
+/* Compute the lookup key */
+function computeKey(transport, args, perClient) {
+    let tmp = transport + args.rrtype;
+    if (args.dnssec_ok) {
+        tmp += "DO";
     }
-    if (checking_disabled) {
-        tmp += "cd";
+    if (args.checking_disabled) {
+        tmp += "CD";
     }
-    tmp += "-" + measurementID;
+    if (perClient) {
+        tmp += "-U";
+    }
+    if (args.noedns0) {
+        tmp += "-N";
+    }
+    
     return tmp;
 }
 
@@ -400,21 +341,23 @@ async function sendQueries(nameservers_ipv4) {
     queries.push(() => sendUDPWebExtQuery(APEX_DOMAIN_NAME));
 
     // Add the remaining queries that use the browser's internal socket APIs
-    for (let { rrtype, prefix, dnssec_ok, checking_disabled } of COMMON_QUERIES) {
+    for (let query of COMMON_QUERIES) {
         // Queries where all clients look up the same domain
-           let args = [prefix + APEX_DOMAIN_NAME, nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
+        let queryName =  query.prefix + APEX_DOMAIN_NAME;
 
-        queries.push(() => sendUDPQuery(...args));
-        queries.push(() => sendTCPQuery(...args));
+        queries.push(() => sendUDPQuery(computeKey("udp", query, false), queryName, query,
+                                       nameservers_ipv4));
+        queries.push(() => sendTCPQuery(computeKey("tcp", query, false), queryName, query,
+                                       nameservers_ipv4));
 
         // Queries where all clients look up a different domain
-        let slug = computeSlug(rrtype, dnssec_ok, checking_disabled);
-        let args_udp = [prefix + "udp-" + slug  + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME,
-                     nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
-        queries.push(() => sendUDPQuery(...args_udp));
-        let args_tcp = [prefix + "tcp-" + slug + "." + PER_CLIENT_PREFIX + prefix + APEX_DOMAIN_NAME,
-                     nameservers_ipv4, rrtype, dnssec_ok, checking_disabled];
-        queries.push(() => sendTCPQuery(...args_tcp));
+        let keyU = computeKey("udp", query, true);
+        let queryNameU = query.prefix + keyU + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;
+        queries.push(() => sendUDPQuery(keyU, queryNameU, query, nameservers_ipv4));
+
+        let keyT = computeKey("tcp", query, true);
+        let queryNameT = query.prefix + keyU + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;        
+        queries.push(() => sendTCPQuery(keyT, queryNameT, query, nameservers_ipv4));
     }
 
     // Shuffle the order of the array of queries, and then send the queries
@@ -429,17 +372,17 @@ async function sendQueries(nameservers_ipv4) {
  * measurement, i.e. a browser session
  */
 function sendTelemetry(payload) {
-    logMessage("Sending telemetry");
+    logMessage("Sending telemetry ");
     logMessage(payload);
     payload.measurementID = measurementID;
     browser.telemetry.submitPing(TELEMETRY_TYPE, payload, TELEMETRY_OPTIONS);
 }
 
 async function fetchTest() {
-    // TODO(ekr@rtfm.com): the test page is down
-    return;
+    /*
+      TODO(ekr@rtfm.com): the test page is down. Uncomment this.
 
-    let responseText;
+    let responseText = null;
     try {
         response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
         responseText = await response.text();
@@ -451,12 +394,13 @@ async function fetchTest() {
         sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
     }
+   */
 }
 
 /**
  * Entry point for our measurements.
  */
-async function runMeasurement(details) {
+;async function runMeasurement(details) {
     /**
      * Only proceed if we're not behind a captive portal, as determined by
      * browser.captivePortal.getState() and browser.captivePortal.onConnectivityAvailable.addListener().
