@@ -238,9 +238,6 @@ async function sendTCPQuery(key, domain, query, nameservers) {
 
     for (let nameserver of nameservers) {
         try {
-            if (!dnsAttempts[key]) {
-                dnsAttempts[key] = 0;
-            }
             dnsAttempts[key] += 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
 
@@ -313,7 +310,7 @@ async function readNameservers() {
 
 /* Compute the lookup key */
 function computeKey(transport, args, perClient) {
-    let tmp = transport + args.rrtype;
+    let tmp = transport + "-" + args.rrtype;
     if (args.dnssec_ok) {
         tmp += "DO";
     }
@@ -326,7 +323,14 @@ function computeKey(transport, args, perClient) {
     if (args.noedns0) {
         tmp += "-N";
     }
-    
+
+    // This is a hack. We register the key in the attempts
+    // table if it hasn't been registered. Otherwise we
+    // needed a lot of copy-and-paste.
+    if (!dnsAttempts[tmp]) {
+        dnsAttempts[tmp] = 0;
+    }
+
     return tmp;
 }
 
@@ -352,11 +356,11 @@ async function sendQueries(nameservers_ipv4) {
 
         // Queries where all clients look up a different domain
         let keyU = computeKey("udp", query, true);
-        let queryNameU = query.prefix + keyU + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;
+        let queryNameU = query.prefix + keyU + "-" + measurementID + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;
         queries.push(() => sendUDPQuery(keyU, queryNameU, query, nameservers_ipv4));
 
         let keyT = computeKey("tcp", query, true);
-        let queryNameT = query.prefix + keyU + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;        
+        let queryNameT = query.prefix + keyU + "-" + measurementID + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;        
         queries.push(() => sendTCPQuery(keyT, queryNameT, query, nameservers_ipv4));
     }
 
