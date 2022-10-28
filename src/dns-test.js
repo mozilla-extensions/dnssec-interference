@@ -19,7 +19,7 @@ const COMMON_QUERIES = [
     { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: true },
     { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: false },
     { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: true },
-    { rrtype: "DNSKEY", prefix: "", dnssec_ok: false, checking_disabled: false },
+    { rrtype: "DNSKEY", prefix: "", dnssec_ok: true, checking_disabled: false },
     { rrtype: "RRSIG", prefix: "", dnssec_ok: false, checking_disabled: false },
     { rrtype: "NEWONE", prefix: "", dnssec_ok: false, checking_disabled: false },
     { rrtype: "NEWTWO", prefix: "", dnssec_ok: false, checking_disabled: false },
