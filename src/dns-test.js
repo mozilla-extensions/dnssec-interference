@@ -65,6 +65,12 @@ function logMessage(m) {
     console.log(m);
 }
 
+function assert(isTrue) {
+    if (!isTrue) {
+        throw new Error();
+    }
+}
+
 /**
  * Shuffle an array
  * Borrowed from https://stackoverflow.com/a/2450976
@@ -335,7 +341,13 @@ function computeKey(transport, args, perClient) {
 }
 
 function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
-    const sendQuery = transport === "udp" ? sendUDPQuery : sendTCPQuery;
+    let sendQuery;
+    if (transport === "udp") {
+        sendQuery = sendUDPQuery;
+    } else {
+        assert(transport === "tcp");
+        sendQuery = sendTCPQuery;
+    }
     const key = computeKey(transport, query, true);
     return () => sendQuery(
         key,
