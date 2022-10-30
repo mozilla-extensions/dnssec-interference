@@ -65,6 +65,12 @@ function logMessage(m) {
     console.log(m);
 }
 
+function assert(isTrue) {
+    if (!isTrue) {
+        throw new Error();
+    }
+}
+
 /**
  * Shuffle an array
  * Borrowed from https://stackoverflow.com/a/2450976
@@ -334,6 +340,24 @@ function computeKey(transport, args, perClient) {
     return tmp;
 }
 
+function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
+    let sendQuery;
+    if (transport === "udp") {
+        sendQuery = sendUDPQuery;
+    } else {
+        assert(transport === "tcp");
+        sendQuery = sendTCPQuery;
+    }
+    const key = computeKey(transport, query, true);
+    return () => sendQuery(
+        key,
+        isUnique ?
+            query.prefix + key + "-" + measurementID + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME :
+            query.prefix + APEX_DOMAIN_NAME,
+        query,
+        nameservers_ipv4
+    );
+}
 
 /**
  * For each RR type that we have a DNS record for, attempt to send queries over
@@ -346,22 +370,12 @@ async function sendQueries(nameservers_ipv4) {
 
     // Add the remaining queries that use the browser's internal socket APIs
     for (let query of COMMON_QUERIES) {
-        // Queries where all clients look up the same domain
-        let queryName =  query.prefix + APEX_DOMAIN_NAME;
-
-        queries.push(() => sendUDPQuery(computeKey("udp", query, false), queryName, query,
-                                       nameservers_ipv4));
-        queries.push(() => sendTCPQuery(computeKey("tcp", query, false), queryName, query,
-                                       nameservers_ipv4));
+        queries.push(sendQueryFactory("udp", query, nameservers_ipv4));
+        queries.push(sendQueryFactory("tcp", query, nameservers_ipv4));
 
         // Queries where all clients look up a different domain
-        let keyU = computeKey("udp", query, true);
-        let queryNameU = query.prefix + keyU + "-" + measurementID + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;
-        queries.push(() => sendUDPQuery(keyU, queryNameU, query, nameservers_ipv4));
-
-        let keyT = computeKey("tcp", query, true);
-        let queryNameT = query.prefix + keyU + "-" + measurementID + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME;        
-        queries.push(() => sendTCPQuery(keyT, queryNameT, query, nameservers_ipv4));
+        queries.push(sendQueryFactory("udp", query, nameservers_ipv4, true));
+        queries.push(sendQueryFactory("tcp", query, nameservers_ipv4, true));
     }
 
     // Shuffle the order of the array of queries, and then send the queries
@@ -404,7 +418,7 @@ async function fetchTest() {
 /**
  * Entry point for our measurements.
  */
-;async function runMeasurement(details) {
+async function runMeasurement(details) {
     /**
      * Only proceed if we're not behind a captive portal, as determined by
      * browser.captivePortal.getState() and browser.captivePortal.onConnectivityAvailable.addListener().
