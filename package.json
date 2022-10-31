@@ -32,6 +32,10 @@
     "lint": "echo 'lint not implemented'"
   },
   "devDependencies": {
-    "eslint": "^7.6.0"
+    "chai": "^4.3.6",
+    "eslint": "^7.6.0",
+    "mocha": "^10.1.0",
+    "sinon": "^7.5.0",
+    "webextensions-api-mock": "^1.0.0"
   }
 }
