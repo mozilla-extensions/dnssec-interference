@@ -549,4 +549,5 @@ async function main() {
     });
 }
 
-main();
+/* Exports */
+module.exports.main = main;
