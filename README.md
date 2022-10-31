@@ -29,6 +29,7 @@ To understand the extent to which network middleboxes between clients and recurs
 At a high-level, we will first serve the above record types from domain names in a zone that we control (e.g., `*.dnssec-experiment-moz.net`). We will then induce Firefox clients to request the following record types from domain names in our zone over UDP and TCP:
 
 - A
+- A without EDNS0
 - A (w/ DO=0, CD=1)
 - A (w/ DO=1, CD=0)
 - A (w/ DO=1, CD=1)
