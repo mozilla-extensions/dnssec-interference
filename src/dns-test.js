@@ -16,7 +16,7 @@ const COMMON_QUERIES = [
     { rrtype: "SMIMEA", prefix: SMIMEA_PREFIX, dnssec_ok: false, checking_disabled: false },
     { rrtype: "HTTPS", prefix: HTTPS_PREFIX, dnssec_ok: false, checking_disabled: false },
     { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false, noedns0: true },    
+    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false, noedns0: true },
     { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: true },
     { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: false },
     { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: true },
@@ -62,6 +62,13 @@ var measurementID;
 var dnsData = {};
 
 var dnsAttempts = {};
+
+
+// For tests
+function resetState() {
+    dnsData = {};
+    dnsAttempts = {};
+}
 
 function logMessage(...args) {
     if (loggingEnabled) {
@@ -210,11 +217,11 @@ async function sendUDPWebExtQuery(domain) {
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
 
     try {
-        dnsAttempts[key] += 1
+        dnsAttempts[key] = dnsAttempts[key] || 0 + 1
         let response = await browser.dns.resolve(domain, flags);
         logDNSResponse(response.addresses, key);
         // If we don't already have a response saved in dnsData, save this one
-        if (!dnsData[key] == 0) {
+        if (!dnsData[key]) {
             dnsData[key] = response.addresses;
         }
         return;
@@ -282,9 +289,7 @@ async function sendUDPQuery(key, domain, query, nameservers) {
  */
 async function sendTCPQuery(key, domain, query, nameservers) {
     let { rrtype, dnssec_ok, checking_disabled, } = query;
-    
     logMessage("TCP: " + rrtype + "? " + domain + " " + key);
-    
     let queryBuf;
     try {
         queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled);
@@ -375,11 +380,11 @@ function computeKey(transport, args, perClient) {
     if (args.checking_disabled) {
         tmp += "CD";
     }
-    if (perClient) {
-        tmp += "-U";
-    }
     if (args.noedns0) {
         tmp += "-N";
+    }
+    if (perClient) {
+        tmp += "-U";
     }
 
     // This is a hack. We register the key in the attempts
@@ -400,7 +405,7 @@ function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
         assert(transport === "tcp");
         sendQuery = sendTCPQuery;
     }
-    const key = computeKey(transport, query, true);
+    const key = computeKey(transport, query, isUnique);
     return () => sendQuery(
         key,
         isUnique ?
@@ -550,4 +555,11 @@ async function main() {
 }
 
 /* Exports */
-module.exports.main = main;
+module.exports = {
+    main,
+    resetState,
+    TELEMETRY_TYPE,
+    STUDY_START,
+    STUDY_MEASUREMENT_COMPLETED,
+    COMMON_QUERIES
+};
