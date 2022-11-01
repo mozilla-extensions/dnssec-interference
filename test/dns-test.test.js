@@ -13,6 +13,7 @@ const {
 const { assert } = require("chai");
 const sinon = require("sinon");
 
+const FAKE_NAMESERVERS = ["172.19.134.11", "172.19.134.12"];
 const FAKE_DNSQUERY_RESP = [1, 2, 3];
 
 /**
@@ -43,7 +44,7 @@ function setupMeasurementEnvironment(sandbox) {
     browser.telemetry.canUpload.resolves(true);
     browser.captivePortal.getState.resolves("not_captive");
     browser.runtime.getPlatformInfo.resolves({os: "win"});
-    browser.experiments.resolvconf.readNameserversWin.resolves([ "172.19.134.11" ]);
+    browser.experiments.resolvconf.readNameserversWin.resolves(FAKE_NAMESERVERS);
     browser.dns.resolve.resolves({addresses: FAKE_DNSQUERY_RESP})
     browser.experiments.tcpsocket.sendDNSQuery.resolves(Buffer.from(FAKE_DNSQUERY_RESP));
     browser.experiments.udpsocket.sendDNSQuery.resolves(Buffer.from(FAKE_DNSQUERY_RESP));
@@ -151,6 +152,5 @@ describe("dns-test.js", () => {
             assert.deepEqual(dnsData, expectedData, "dnsData should exist and have the right response")
             return true;
         });
-
     });
 });
