@@ -2,22 +2,34 @@
 /* exported resolvconf */
 /* global ChromeUtils, ExtensionAPI, Cc, Ci, */
 
-const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
-const { ExtensionUtils } = ChromeUtils.import(
-  "resource://gre/modules/ExtensionUtils.jsm"
-);
-const { ExtensionError } = ExtensionUtils;
-
-const MAC_RESOLVCONF_PATH = "/etc/resolv.conf";
-const STUDY_ERROR_NAMESERVERS_FILE = "STUDY_ERROR_NAMESERVERS_FILE";
+/** Warning!!
+ *  You shouldn't declare anything in the global scope, which is shared with other api.js from the same privileged extension.
+ *  See https://firefox-source-docs.mozilla.org/toolkit/components/extensions/webextensions/basics.html#globals-available-in-the-api-scripts-global
+ */
 
 var resolvconf = class resolvconf extends ExtensionAPI {
+    static MAC_RESOLVCONF_PATH = "/etc/resolv.conf";
+    static STUDY_ERROR_NAMESERVERS_FILE = "STUDY_ERROR_NAMESERVERS_FILE";
+
+    constructor(...args) {
+        super(...args);
+        ChromeUtils.defineModuleGetter(this, "OS", "resource://gre/modules/osfile.jsm");
+    }
+
     getAPI(context) {
+        const {
+            MAC_RESOLVCONF_PATH,
+            STUDY_ERROR_NAMESERVERS_FILE
+        } = resolvconf;
+
+        const { ExtensionError } = ExtensionUtils;
+        const { OS } = this;
+
         return {
             experiments: {
                 resolvconf: {
                     /**
-                     * If a client is on macOS, read nameservers from 
+                     * If a client is on macOS, read nameservers from
                      * /etc/resolv.conf
                      */
                     async readNameserversMac() {

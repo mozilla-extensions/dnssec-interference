@@ -1,25 +1,37 @@
 "use strict";
 /* exported udpsocket */
-/* global Cu, Components, ChromeUtils, ExtensionError, ExtensionAPI */
+/* global Cu, CC, Ci, ChromeUtils, ExtensionUtils, ExtensionAPI, Services */
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
-const { setTimeout } = ChromeUtils.import("resource://gre/modules/Timer.jsm");
-
-const RESOLVCONF_TIMEOUT = 5000; // Default timeout set by resolvconf for queries
-
-const STUDY_ERROR_UDP_PREMATURE_CLOSE = "STUDY_ERROR_UDP_PREMATURE_CLOSE";
-const STUDY_ERROR_UDP_BYTES_WRITTEN = "STUDY_ERROR_UDP_BYTES_WRITTEN";
-const STUDY_ERROR_UDP_QUERY_TIMEOUT = "STUDY_ERROR_UDP_QUERY_TIMEOUT";
+/** Warning!!
+ *  You shouldn't declare anything in the global scope, which is shared with other api.js from the same privileged extension.
+ *  See https://firefox-source-docs.mozilla.org/toolkit/components/extensions/webextensions/basics.html#globals-available-in-the-api-scripts-global
+ */
 
 var udpsocket = class udpsocket extends ExtensionAPI {
+    static RESOLVCONF_TIMEOUT = 5000; // Default timeout set by resolvconf for queries
+    static STUDY_ERROR_UDP_PREMATURE_CLOSE = "STUDY_ERROR_UDP_PREMATURE_CLOSE";
+    static STUDY_ERROR_UDP_BYTES_WRITTEN = "STUDY_ERROR_UDP_BYTES_WRITTEN";
+    static STUDY_ERROR_UDP_QUERY_TIMEOUT = "STUDY_ERROR_UDP_QUERY_TIMEOUT";
+
+    constructor(...args) {
+        super(...args);
+        ChromeUtils.defineModuleGetter(this, "setTimeout", "resource://gre/modules/Timer.jsm");
+    }
+
     getAPI(context) {
+        const {
+            RESOLVCONF_TIMEOUT,
+            STUDY_ERROR_UDP_PREMATURE_CLOSE,
+            STUDY_ERROR_UDP_BYTES_WRITTEN,
+            STUDY_ERROR_UDP_QUERY_TIMEOUT
+        } = udpsocket;
+        const { ExtensionError } = ExtensionUtils;
+        const { setTimeout } = this;
         return {
             experiments: {
                 udpsocket: {
                     /**
-                     * Send a DNS query stored in buf to a nameserver addresses by addr 
+                     * Send a DNS query stored in buf to a nameserver addresses by addr
                      * over a UDP socket
                      */
                     async sendDNSQuery(addr, buf) {
@@ -51,7 +63,7 @@ var udpsocket = class udpsocket extends ExtensionAPI {
                                     onStopListening(aSocket, aStatus) { 
                                         reject(new ExtensionError(STUDY_ERROR_UDP_PREMATURE_CLOSE));
                                     }
-                                }); 
+                                });
 
                                 written = socket.send(addr, 53, buf);
                                 if (written != buf.length) {

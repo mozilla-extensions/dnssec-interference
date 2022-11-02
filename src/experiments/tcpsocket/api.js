@@ -1,23 +1,11 @@
 "use strict";
 /* exported tcpsocket */
-/* global ExtensionError, ExtensionAPI, ChromeUtils, Cu */
+/* global ExtensionAPI, ChromeUtils, Cu */
 
-const { TCPSocket } = Cu.getGlobalForObject(
-    ChromeUtils.import("resource://gre/modules/Services.jsm")
-);
-
-/**
- * Long timeout just in case we don't receive enough data 
- * but the socket doesn't close
+/** Warning!!
+ *  You shouldn't declare anything in the global scope, which is shared with other api.js from the same privileged extension.
+ *  See https://firefox-source-docs.mozilla.org/toolkit/components/extensions/webextensions/basics.html#globals-available-in-the-api-scripts-global
  */
-const LONG_TIMEOUT = 60000;
-
-const STUDY_ERROR_TCP_NETWORK_TIMEOUT = "STUDY_ERROR_TCP_NETWORK_TIMEOUT";
-const STUDY_ERROR_TCP_NETWORK_MISC = "STUDY_ERROR_TCP_NETWORK_MISC";
-const STUDY_ERROR_TCP_CONNECTION_REFUSED = "STUDY_ERROR_TCP_CONNECTION_REFUSED";
-const STUDY_ERROR_TCP_NOT_ENOUGH_BYTES = "STUDY_ERROR_TCP_NOT_ENOUGH_BYTES"; 
-const STUDY_ERROR_TCP_TOO_MANY_BYTES = "STUDY_ERROR_TCP_TOO_MANY_BYTES";
-const STUDY_ERROR_TCP_QUERY_TIMEOUT = "STUDY_ERROR_TCP_QUERY_TIMEOUT";
 
 /**
  * Concatenate two Uint8Array objects
@@ -30,11 +18,47 @@ function concatUint8Arrays(a, b) {
 }
 
 var tcpsocket = class tcpsocket extends ExtensionAPI {
+    /**
+     * Long timeout just in case we don't receive enough data
+     * but the socket doesn't close
+     */
+    static LONG_TIMEOUT = 60000;
+    static STUDY_ERROR_TCP_NETWORK_TIMEOUT = "STUDY_ERROR_TCP_NETWORK_TIMEOUT";
+    static STUDY_ERROR_TCP_NETWORK_MISC = "STUDY_ERROR_TCP_NETWORK_MISC";
+    static STUDY_ERROR_TCP_CONNECTION_REFUSED = "STUDY_ERROR_TCP_CONNECTION_REFUSED";
+    static STUDY_ERROR_TCP_NOT_ENOUGH_BYTES = "STUDY_ERROR_TCP_NOT_ENOUGH_BYTES";
+    static STUDY_ERROR_TCP_TOO_MANY_BYTES = "STUDY_ERROR_TCP_TOO_MANY_BYTES";
+    static STUDY_ERROR_TCP_QUERY_TIMEOUT = "STUDY_ERROR_TCP_QUERY_TIMEOUT";
+
+    constructor(...args) {
+        super(...args);
+        ExtensionCommon.defineLazyGetter(this, "TCPSocket", () => {
+            const { TCPSocket } = Cu.getGlobalForObject(
+              ChromeUtils.import("resource://gre/modules/Services.jsm")
+            );
+            return TCPSocket;
+        });
+        ChromeUtils.defineModuleGetter(this, "setTimeout", "resource://gre/modules/Timer.jsm");
+    }
+
     getAPI(context) {
+        const {
+            LONG_TIMEOUT,
+            STUDY_ERROR_TCP_NETWORK_TIMEOUT,
+            STUDY_ERROR_TCP_NETWORK_MISC,
+            STUDY_ERROR_TCP_CONNECTION_REFUSED,
+            STUDY_ERROR_TCP_NOT_ENOUGH_BYTES,
+            STUDY_ERROR_TCP_TOO_MANY_BYTES,
+            STUDY_ERROR_TCP_QUERY_TIMEOUT,
+        } = tcpsocket;
+
+        const { ExtensionError } = ExtensionUtils;
+        const { TCPSocket, setTimeout } = this;
+
         return {
             experiments: {
                 tcpsocket: {
-                    /** 
+                    /**
                      * Send a DNS query stored in buf over a TCP socket to a 
                      * nameserver addressed by addr
                      */
