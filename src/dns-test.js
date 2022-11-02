@@ -76,9 +76,9 @@ function logMessage(...args) {
     }
 }
 
-function assert(isTrue) {
+function assert(isTrue, message) {
     if (!isTrue) {
-        throw new Error();
+        throw new Error(message);
     }
 }
 
@@ -199,6 +199,8 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
     return buf
 }
 
+
+const sendDNSQuery = {};
 /**
  * Send a DNS query for an A record over UDP using the WebExtensions
  * dns.resolve() API
@@ -212,7 +214,7 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
  * used. We make sure that DoH is not used and that A records are queried,
  * rather than AAAA.
  */
-async function sendUDPWebExtQuery(domain) {
+sendDNSQuery.system = async (domain) => {
     let key = "udpAWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
 
@@ -229,10 +231,10 @@ async function sendUDPWebExtQuery(domain) {
         logMessage("DNS resolution failed " + e);
         let errorReason = STUDY_ERROR_UDP_WEBEXT;
         sendTelemetry({reason: errorReason,
-                       errorRRTYPE: key,
-                       errorAttempt: dnsAttempts[key]});
+                    errorRRTYPE: key,
+                    errorAttempt: dnsAttempts[key]});
     }
-}
+};
 
 /**
  * Send a DNS query over UDP, re-transmitting according to default
@@ -242,9 +244,9 @@ async function sendUDPWebExtQuery(domain) {
  * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT
  * (5000 ms).
  */
-async function sendUDPQuery(key, domain, query, nameservers) {
+ sendDNSQuery.udp = async (key, domain, query, nameservers) => {
     let { rrtype, dnssec_ok, checking_disabled, noedns0 } = query;
-    
+
     logMessage("UDP: " + rrtype + "? " + domain + " " + key);
     let queryBuf;
     try {
@@ -269,6 +271,7 @@ async function sendUDPQuery(key, domain, query, nameservers) {
                 // We don't need to re-transmit.
                 return;
             } catch(e) {
+                console.error(e);
                 let errorReason;
                 if (e.message.startsWith("STUDY_ERROR_UDP")) {
                     errorReason = e.message;
@@ -276,18 +279,18 @@ async function sendUDPQuery(key, domain, query, nameservers) {
                     errorReason = STUDY_ERROR_UDP_MISC;
                 }
                 sendTelemetry({reason: errorReason,
-                               errorRRTYPE: key,
-                               errorAttempt: dnsAttempts[key]});
+                            errorRRTYPE: key,
+                            errorAttempt: dnsAttempts[key]});
             }
         }
     }
-}
+};
 
 /**
  * Send a DNS query over TCP, re-transmitting to another nameserver if we
  * fail to receive a response. We let TCP handle re-transmissions.
  */
-async function sendTCPQuery(key, domain, query, nameservers) {
+sendDNSQuery.tcp = async (key, domain, query, nameservers) => {
     let { rrtype, dnssec_ok, checking_disabled, } = query;
     logMessage("TCP: " + rrtype + "? " + domain + " " + key);
     let queryBuf;
@@ -312,6 +315,7 @@ async function sendTCPQuery(key, domain, query, nameservers) {
             // We don't need to re-transmit.
             return;
         } catch (e) {
+            console.error(e);
             let errorReason;
             if (e.message.startsWith("STUDY_ERROR_TCP")) {
                 errorReason = e.message;
@@ -319,12 +323,12 @@ async function sendTCPQuery(key, domain, query, nameservers) {
                 errorReason = STUDY_ERROR_TCP_MISC;
             }
             sendTelemetry({reason: errorReason,
-                           errorRRTYPE: key,
-                           errorAttempt: dnsAttempts[key]});
+                        errorRRTYPE: key,
+                        errorAttempt: dnsAttempts[key]});
 
         }
     }
-}
+};
 
 /**
  * Read the client's nameservers from disk.
@@ -398,14 +402,10 @@ function computeKey(transport, args, perClient) {
 }
 
 function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
-    let sendQuery;
-    if (transport === "udp") {
-        sendQuery = sendUDPQuery;
-    } else {
-        assert(transport === "tcp");
-        sendQuery = sendTCPQuery;
-    }
     const key = computeKey(transport, query, isUnique);
+    assert(transport in sendDNSQuery, `${transport} is not a valid transport type`);
+    let sendQuery = sendDNSQuery[transport];
+
     return () => sendQuery(
         key,
         isUnique ?
@@ -423,7 +423,7 @@ function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
 async function sendQueries(nameservers_ipv4) {
     // Add a query for our A record that uses the WebExtensions dns.resolve API as a baseline
     let queries = [];
-    queries.push(() => sendUDPWebExtQuery(APEX_DOMAIN_NAME));
+    queries.push(() => sendDNSQuery.system(APEX_DOMAIN_NAME));
 
     // Add the remaining queries that use the browser's internal socket APIs
     for (let query of COMMON_QUERIES) {
@@ -515,8 +515,8 @@ async function runMeasurement(details) {
 /**
  * Entry point for our addon.
  */
-async function main() {
-    measurementID = uuidv4();
+async function main({uuid = uuidv4()} = {}) {
+    measurementID = uuid;
 
     // Turn on logging only if the add-on was installed temporarily
     loggingEnabled = (await browser.management.getSelf()).installType === "development"
@@ -558,6 +558,7 @@ async function main() {
 module.exports = {
     main,
     resetState,
+    sendDNSQuery,
     TELEMETRY_TYPE,
     STUDY_START,
     STUDY_MEASUREMENT_COMPLETED,
