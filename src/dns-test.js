@@ -1,5 +1,6 @@
 /* global browser */
 const DNS_PACKET = require("dns-packet");
+const { Buffer } = require("buffer");
 const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
@@ -62,15 +63,60 @@ var dnsData = {};
 
 var dnsAttempts = {};
 
-function logMessage(m) {
+function logMessage(...args) {
     if (loggingEnabled) {
-        console.log(m);
+        console.log(...args);
     }
 }
 
 function assert(isTrue) {
     if (!isTrue) {
         throw new Error();
+    }
+}
+
+function stringifyAndTruncate(data) {
+    let str = "";
+    try {
+        str = JSON.stringify(data);
+    } catch (e) {
+        logMessage("Could not stringify data", data);
+    }
+    return str.length > 50 ? `${str.slice(0, 50)}...` : str;
+}
+
+/**
+ *
+ *
+ * @param {ArrayBuffer|string} resp A response from one of the DNSQuery api helpers
+ * @param {string} key The key of the query via computeKey
+ * @param {"tcp"|"udp"} [transport] Optional. If this is omitted, the response won't be parsed.
+ * @returns
+ */
+function logDNSResponse(resp, key, transport) {
+    if (!loggingEnabled) {
+        return;
+    }
+    try {
+        let parsed;
+        if (transport === "tcp") {
+            parsed = DNS_PACKET.streamDecode(Buffer.from(resp));
+        } else if (transport === "udp") {
+            parsed = DNS_PACKET.decode(Buffer.from(resp));
+        }
+        if (parsed) {
+            logMessage(
+                `DNS Query for ${key}:\n` +
+                `[Q] ${parsed.questions?.map(({name, type}) => `${name} ${type}`).join(",")}\n` +
+                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${name} ${type} ${stringifyAndTruncate(data)}`).join("\n    ")} `,
+                'color: green;',
+            );
+        } else {
+            logMessage("Control DNS Query", resp);
+        }
+    } catch (error) {
+        console.warn("Could not log DNS response");
+        console.error(error);
     }
 }
 
@@ -166,6 +212,7 @@ async function sendUDPWebExtQuery(domain) {
     try {
         dnsAttempts[key] += 1
         let response = await browser.dns.resolve(domain, flags);
+        logDNSResponse(response.addresses, key);
         // If we don't already have a response saved in dnsData, save this one
         if (!dnsData[key] == 0) {
             dnsData[key] = response.addresses;
@@ -205,6 +252,7 @@ async function sendUDPQuery(key, domain, query, nameservers) {
             try {
                 dnsAttempts[key] += 1
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
+                logDNSResponse(responseBytes, key, "udp");
 
                 // If we don't already have a response saved in dnsData, save this one
                 if (!dnsData[key]) {
@@ -249,6 +297,7 @@ async function sendTCPQuery(key, domain, query, nameservers) {
         try {
             dnsAttempts[key] += 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
+            logDNSResponse(responseBytes, key, "tcp");
 
             // If we don't already have a response saved in dnsData, save this one
             if (!dnsData[key]) {
