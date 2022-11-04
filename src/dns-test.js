@@ -400,12 +400,10 @@ function sendTelemetry(payload) {
 }
 
 async function fetchTest() {
-    /*
-      TODO(ekr@rtfm.com): the test page is down. Uncomment this.
 
     let responseText = null;
     try {
-        response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
+        const response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
         responseText = await response.text();
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_FETCH_FAILED});
@@ -415,7 +413,6 @@ async function fetchTest() {
         sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
     }
-   */
 }
 
 /**
