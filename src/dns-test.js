@@ -63,17 +63,36 @@ var dnsData = {};
 
 var dnsAttempts = {};
 
-function logMessage(m) {
+function logMessage(...args) {
     if (loggingEnabled) {
-        console.log(m);
+        console.log(...args);
     }
 }
 
 function assert(isTrue) {
     if (!isTrue) {
         throw new Error();
+    }
 }
 
+function stringifyAndTruncate(data) {
+    let str = "";
+    try {
+        str = JSON.stringify(data);
+    } catch (e) {
+        logMessage("Could not stringify data", data);
+    }
+    return str.length > 50 ? `${str.slice(0, 50)}...` : str;
+}
+
+/**
+ *
+ *
+ * @param {ArrayBuffer|string} resp A response from one of the DNSQuery api helpers
+ * @param {string} key The key of the query via computeKey
+ * @param {"tcp"|"udp"} [transport] Optional. If this is omitted, the response won't be parsed.
+ * @returns
+ */
 function logDNSResponse(resp, key, transport) {
     if (!loggingEnabled) {
         return;
@@ -86,14 +105,14 @@ function logDNSResponse(resp, key, transport) {
             parsed = DNS_PACKET.decode(Buffer.from(resp));
         }
         if (parsed) {
-            console.log(
+            logMessage(
                 `DNS Query for ${key}:\n` +
                 `[Q] ${parsed.questions?.map(({name, type}) => `${name} ${type}`).join(",")}\n` +
-                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${name} ${type} ${JSON.stringify(data).slice(0, 50)}`).join("\n    ")} `,
+                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${name} ${type} ${stringifyAndTruncate(data)}`).join("\n    ")} `,
                 'color: green;',
             );
         } else {
-            console.log("Control DNS Query: " + resp?.addresses.join(" "));
+            logMessage("Control DNS Query", resp);
         }
     } catch (error) {
         console.warn("Could not log DNS response");
@@ -193,7 +212,7 @@ async function sendUDPWebExtQuery(domain) {
     try {
         dnsAttempts[key] += 1
         let response = await browser.dns.resolve(domain, flags);
-        logDNSResponse(response, key);
+        logDNSResponse(response.addresses, key);
         // If we don't already have a response saved in dnsData, save this one
         if (!dnsData[key] == 0) {
             dnsData[key] = response.addresses;
