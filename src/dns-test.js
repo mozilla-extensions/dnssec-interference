@@ -219,7 +219,7 @@ sendDNSQuery.system = async (domain) => {
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
 
     try {
-        dnsAttempts[key] = dnsAttempts[key] || 0 + 1
+        dnsAttempts[key] = (dnsAttempts[key] || 0) + 1
         let response = await browser.dns.resolve(domain, flags);
         logDNSResponse(response.addresses, key);
         // If we don't already have a response saved in dnsData, save this one
