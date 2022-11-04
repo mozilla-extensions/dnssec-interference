@@ -55,6 +55,7 @@ const MIN_TXID = 0;
 
 const UDP_PAYLOAD_SIZE = 4096;
 
+var loggingEnabled;
 var measurementID;
 
 var dnsData = {};
@@ -62,7 +63,9 @@ var dnsData = {};
 var dnsAttempts = {};
 
 function logMessage(m) {
-    console.log(m);
+    if (loggingEnabled) {
+        console.log(m);
+    }
 }
 
 function assert(isTrue) {
@@ -463,6 +466,10 @@ async function runMeasurement(details) {
  */
 async function main() {
     measurementID = uuidv4();
+
+    // Turn on logging only if the add-on was installed temporarily
+    loggingEnabled = (await browser.management.getSelf()).installType === "development"
+    logMessage("Logging is enabled");
 
     // If we can't upload telemetry. don't run the addon
     let canUpload = await browser.telemetry.canUpload();
