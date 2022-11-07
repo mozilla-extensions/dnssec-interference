@@ -1,18 +1,28 @@
 /* eslint-env node, mocha */
 /* global browser */
 
+
+/**
+ * @typedef {import("../src/dns-test.js").QueryConfig} QueryConfig
+ */
+
 const { default: browserMock } = require("webextensions-api-mock");
 const {
     main,
     resetState,
+    computeKey,
     sendDNSQuery,
     TELEMETRY_TYPE,
     STUDY_START,
     STUDY_MEASUREMENT_COMPLETED,
-    COMMON_QUERIES
+    COMMON_QUERIES,
+    EXPECTED_FETCH_RESPONSE
 } = require("../src/dns-test");
 const { assert } = require("chai");
 const sinon = require("sinon");
+
+// < Node 18
+global.fetch = global.fetch || require("node-fetch");
 
 /**
  * Some fake configuration
@@ -20,7 +30,6 @@ const sinon = require("sinon");
 const FAKE_NAMESERVERS = ["172.19.134.11", "172.19.134.12"];
 const FAKE_DNSQUERY_RESP = [1, 2, 3];
 const FAKE_UUID = "fakeuuid";
-
 /**
  * This is a list of all key types we expect to see in the final ping.
  * Each item will have 4 variants: tcp, udp, tcp per-client, udp per-client
@@ -68,6 +77,10 @@ const EXPECTED_QUERY_CHECK = [
     ["udp", "udp-HTTPS-U", `httpssvc.udp-HTTPS-U-${FAKE_UUID}.pc.dnssec-experiment-moz.net`],
 ];
 
+function mockFetch(url, text) {
+    global.fetch.withArgs(url).resolves(Promise.resolve({text: () => Promise.resolve(text)}));
+}
+
 /**
  *  It's difficult to import the privileged APIs for the add-on directly,
  *  so we just stub them out.
@@ -92,10 +105,13 @@ function setupExperiments(browserObj) {
  * This simulates an environment in which DNS queries can be properly sent
  * and a response is returned.
  */
-function setupMeasurementEnvironment(sandbox) {
+async function setupMeasurementEnvironment(sandbox) {
     browser.telemetry.canUpload.resolves(true);
     browser.captivePortal.getState.resolves("not_captive");
     browser.runtime.getPlatformInfo.resolves({os: "win"});
+
+    mockFetch("https://dnssec-experiment-moz.net/", EXPECTED_FETCH_RESPONSE);
+
     browser.experiments.resolvconf.readNameserversWin.resolves(FAKE_NAMESERVERS);
     browser.dns.resolve.resolves({addresses: FAKE_DNSQUERY_RESP})
     browser.experiments.tcpsocket.sendDNSQuery.resolves(Buffer.from(FAKE_DNSQUERY_RESP));
@@ -131,10 +147,15 @@ function assertPingSent(reason, customMatch) {
     );
 }
 
+function run() {
+    return main({ uuid: FAKE_UUID });
+}
+
 describe("dns-test.js", () => {
     before(async function () {
         global.browser = browserMock();
         setupExperiments(global.browser);
+        global.browser.sinonSandbox.stub(global, "fetch");
         global.browser.sinonSandbox.spy(sendDNSQuery);
     });
 
@@ -146,15 +167,34 @@ describe("dns-test.js", () => {
         browser.sinonSandbox.resetHistory();
         resetState();
         setupMeasurementEnvironment();
-        await main({ uuid: FAKE_UUID });
     });
-    
+
+    describe("computeKey", () => {
+        it("should compute a key for a record", () => {
+            assert.equal(computeKey("tcp", {rrtype: "A"}), "tcp-A");
+        });
+        it("should compute a key for a per-client record", () => {
+            assert.equal(computeKey("tcp", {rrtype: "A"}, true), "tcp-A-U");
+        });
+        it("should compute a key for a DO record", () => {
+            assert.equal(computeKey("udp", {rrtype: "DNSKEY", dnssec_ok: true}), "udp-DNSKEYDO");
+        });
+        it("should compute a key for a CD record", () => {
+            assert.equal(computeKey("udp", {rrtype: "A", checking_disabled: true}), "udp-ACD");
+        });
+        it("should compute a key for a noedns0 + per-client record", () => {
+            assert.equal(computeKey("udp", {rrtype: "A", noedns0: true}, true), "udp-A-N-U");
+        });
+    });
+
     describe("pings", () => {
         it("should send a STUDY_START ping", async () => {
+            await run();
             assertPingSent(STUDY_START);
         });
 
         it("should send a STUDY_MEASUREMENT_COMPLETED ping with the right number of keys", async () => {
+            await run();
             /**
              * The total number of expected entries is 1 for the system DNS query + 4 queries
              * for each item in the COMMON_QUERY config.
@@ -168,6 +208,7 @@ describe("dns-test.js", () => {
         });
 
         it("should send a STUDY_MEASUREMENT_COMPLETED ping with the right data", async () => {
+            await run();
             const expectedAttempts = { udpAWebExt: 1 };
             const expectedData = { udpAWebExt: FAKE_DNSQUERY_RESP };
 
@@ -190,16 +231,55 @@ describe("dns-test.js", () => {
                 return true;
             });
         });
+        it("should send a STUDY_MEASUREMENT_COMPLETED ping with the correct data when tcp reattempts were made", async () => {
+            const expectedAttempts = { udpAWebExt: 1 };
+            const expectedData = { udpAWebExt: FAKE_DNSQUERY_RESP };
+
+            // Ensure tcpsocket fails only for the first nameserver
+            browser.experiments.tcpsocket.sendDNSQuery.withArgs(FAKE_NAMESERVERS[0]).throws();
+
+            await run();
+
+            ALL_KEY_TYPES.forEach(key => {
+                expectedAttempts[key] = key.match(/^tcp/) ? 2 : 1
+                expectedData[key] = FAKE_DNSQUERY_RESP
+            });
+
+            assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({dnsAttempts, dnsData}) => {
+                assert.deepEqual(
+                    dnsAttempts,
+                    expectedAttempts,
+                    "dnsAttempts should exist and have 1 attempt"
+                );
+                assert.deepEqual(
+                    dnsData,
+                    expectedData,
+                    "dnsData should exist and have the right response"
+                );
+                return true;
+            });
+        });
+
+        it("should send STUDY_MEASUREMENT_COMPLETED even when some queries fail", async () => {
+            browser.experiments.udpsocket.sendDNSQuery.withArgs("dnssec-experiment-moz.net").throws();
+            browser.experiments.tcpsocket.sendDNSQuery.withArgs("dnssec-experiment-moz.net").throws();
+
+            await run();
+
+            assertPingSent(STUDY_MEASUREMENT_COMPLETED);
+        });
     });
 
     describe("queries", () => {
-        it("should send the control query", () => {
+        it("should send the control query", async () => {
+            await run();
             sinon.assert.calledOnceWithMatch(sendDNSQuery.system, "dnssec-experiment-moz.net");
         });
 
-        it("should send the expected tcp and udp queries", () => {
-            EXPECTED_QUERY_CHECK.forEach(([transport, key, domain]) => {
-                sinon.assert.calledWithMatch(sendDNSQuery[transport], key, domain);
+        it("should send the expected tcp and udp queries", async () => {
+            await run();
+            EXPECTED_QUERY_CHECK.forEach(([transport, ...args]) => {
+                sinon.assert.calledWithMatch(sendDNSQuery[transport], ...args);
             });
         });
     });
