@@ -16,7 +16,8 @@ const {
     STUDY_START,
     STUDY_MEASUREMENT_COMPLETED,
     COMMON_QUERIES,
-    EXPECTED_FETCH_RESPONSE
+    EXPECTED_FETCH_RESPONSE,
+    SMIMEA_HASH
 } = require("../src/dns-test");
 const { assert } = require("chai");
 const sinon = require("sinon");
@@ -72,9 +73,13 @@ const EXPECTED_QUERY_CHECK = [
 
     // HTTPS records should have a prefix
     ["tcp", "tcp-HTTPS", "httpssvc.dnssec-experiment-moz.net"],
-    ["tcp", "tcp-HTTPS-U", `httpssvc.tcp-HTTPS-U-${FAKE_UUID}.pc.dnssec-experiment-moz.net`],
+    ["tcp", "tcp-HTTPS-U", `tcp-HTTPS-U-${FAKE_UUID}.httpssvc-pc.dnssec-experiment-moz.net`],
     ["udp", "udp-HTTPS", "httpssvc.dnssec-experiment-moz.net"],
-    ["udp", "udp-HTTPS-U", `httpssvc.udp-HTTPS-U-${FAKE_UUID}.pc.dnssec-experiment-moz.net`],
+    ["udp", "udp-HTTPS-U", `udp-HTTPS-U-${FAKE_UUID}.httpssvc-pc.dnssec-experiment-moz.net`],
+
+    // SMIMEA records should have the right SMIMEA structure
+    ["tcp", "tcp-SMIMEA", SMIMEA_HASH + "._smimecert.dnssec-experiment-moz.net"],
+    ["udp", "udp-SMIMEA-U", `udp-SMIMEA-U-${FAKE_UUID}._smimecert.pc.dnssec-experiment-moz.net`],
 ];
 
 function mockFetch(url, text) {
