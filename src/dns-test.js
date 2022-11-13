@@ -5,9 +5,7 @@ const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
-const SMIMEA_PREFIX = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15.";
-const HTTPS_PREFIX = "httpssvc.";
-const PER_CLIENT_PREFIX="pc.";
+const SMIMEA_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15";
 const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
 
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
@@ -15,7 +13,8 @@ const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let 
 /**
  * @typedef {Object} QueryConfig
  * @property {string} rrtype - Record type. e.g., "A"
- * @property {string=} prefix - Domain prefix
+ * @property {string=} prefix - Domain prefix. Defaults to ""
+ * @property {string=} perClientPrefix - Domain prefix for per-client variant. Defaults to "pc"
  * @property {boolean=} dnssec_ok - Flag
  * @property {boolean=} checking_disabled - Flag
  * @property {boolean=} noedns0 - Flag
@@ -23,19 +22,19 @@ const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let 
 
 /** @type QueryConfig[] */
 const COMMON_QUERIES = [
-    { rrtype: "SMIMEA", prefix: SMIMEA_PREFIX, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "HTTPS", prefix: HTTPS_PREFIX, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false, noedns0: true },
-    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: true },
-    { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: false },
-    { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: true },
-    { rrtype: "DNSKEY", prefix: "", dnssec_ok: true, checking_disabled: false },
-    { rrtype: "RRSIG", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWONE", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWTWO", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWTHREE", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWFOUR", prefix: "", dnssec_ok: false, checking_disabled: false }
+    { rrtype: "SMIMEA", prefix: SMIMEA_HASH + "._smimecert", perClientPrefix: "_smimecert.pc"},
+    { rrtype: "HTTPS", prefix: "httpssvc", perClientPrefix: "httpssvc-pc"},
+    { rrtype: "A"},
+    { rrtype: "A", noedns0: true },
+    { rrtype: "A", checking_disabled: true },
+    { rrtype: "A", dnssec_ok: true },
+    { rrtype: "A", dnssec_ok: true, checking_disabled: true },
+    { rrtype: "DNSKEY", dnssec_ok: true },
+    { rrtype: "RRSIG"},
+    { rrtype: "NEWONE"},
+    { rrtype: "NEWTWO"},
+    { rrtype: "NEWTHREE"},
+    { rrtype: "NEWFOUR"}
 ];
 
 const STUDY_START = "STUDY_START";
@@ -413,16 +412,29 @@ function computeKey(transport, args, perClient) {
     return tmp;
 }
 
-function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
-    const key = computeKey(transport, query, isUnique);
+/**
+ * @param {string} key
+ * @param {QueryConfig} query
+ * @param {boolean} perClient
+ * @returns string
+ */
+function computeDomain(key, {prefix = "", perClientPrefix = "pc"}, perClient) {
+    if (perClient) {
+        return `${key}-${measurementID}.${perClientPrefix}.${APEX_DOMAIN_NAME}`;
+    } else {
+        return `${prefix}.${APEX_DOMAIN_NAME}`;
+    }
+}
+
+function sendQueryFactory(transport, query, nameservers_ipv4, perClient) {
+    const key = computeKey(transport, query, perClient);
+    const domain = computeDomain(key, query, perClient);
     assert(transport in sendDNSQuery, `${transport} is not a valid transport type`);
     let sendQuery = sendDNSQuery[transport];
 
     return () => sendQuery(
         key,
-        isUnique ?
-            query.prefix + key + "-" + measurementID + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME :
-            query.prefix + APEX_DOMAIN_NAME,
+        domain,
         query,
         nameservers_ipv4
     );
@@ -578,5 +590,6 @@ module.exports = {
     STUDY_START,
     STUDY_MEASUREMENT_COMPLETED,
     COMMON_QUERIES,
-    EXPECTED_FETCH_RESPONSE
+    EXPECTED_FETCH_RESPONSE,
+    SMIMEA_HASH
 };
