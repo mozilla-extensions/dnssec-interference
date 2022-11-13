@@ -24,14 +24,19 @@
   },
   "scripts": {
     "build": "npm-run-all clean build:background build:extension build:finalize",
-    "build:background": "browserify src/dns-test.js -o src/background.js",
+    "build:background": "browserify src/index.js -o src/background.js",
     "build:extension": "web-ext build",
     "build:finalize": "mv web-ext-artifacts/*.zip web-ext-artifacts/dnssec-interference-study.xpi",
     "clean": "rm -rf web-ext-artifacts",
-    "test": "echo 'test not implemented'",
+    "test": "mocha",
     "lint": "echo 'lint not implemented'"
   },
   "devDependencies": {
-    "eslint": "^7.6.0"
+    "chai": "^4.3.6",
+    "eslint": "^7.6.0",
+    "mocha": "^10.1.0",
+    "node-fetch": "^2.6.7",
+    "sinon": "^14.0.1",
+    "webextensions-api-mock": "^1.0.0"
   }
 }

@@ -5,27 +5,36 @@ const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
-const SMIMEA_PREFIX = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15.";
-const HTTPS_PREFIX = "httpssvc.";
-const PER_CLIENT_PREFIX="pc.";
-
+const SMIMEA_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15";
+const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
 
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
+/**
+ * @typedef {Object} QueryConfig
+ * @property {string} rrtype - Record type. e.g., "A"
+ * @property {string=} prefix - Domain prefix. Defaults to ""
+ * @property {string=} perClientPrefix - Domain prefix for per-client variant. Defaults to "pc"
+ * @property {boolean=} dnssec_ok - Flag
+ * @property {boolean=} checking_disabled - Flag
+ * @property {boolean=} noedns0 - Flag
+ */
+
+/** @type QueryConfig[] */
 const COMMON_QUERIES = [
-    { rrtype: "SMIMEA", prefix: SMIMEA_PREFIX, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "HTTPS", prefix: HTTPS_PREFIX, dnssec_ok: false, checking_disabled: false },
-    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: false, noedns0: true },    
-    { rrtype: "A", prefix: "", dnssec_ok: false, checking_disabled: true },
-    { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: false },
-    { rrtype: "A", prefix: "", dnssec_ok: true, checking_disabled: true },
-    { rrtype: "DNSKEY", prefix: "", dnssec_ok: true, checking_disabled: false },
-    { rrtype: "RRSIG", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWONE", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWTWO", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWTHREE", prefix: "", dnssec_ok: false, checking_disabled: false },
-    { rrtype: "NEWFOUR", prefix: "", dnssec_ok: false, checking_disabled: false }
+    { rrtype: "SMIMEA", prefix: SMIMEA_HASH + "._smimecert", perClientPrefix: "_smimecert.pc"},
+    { rrtype: "HTTPS", prefix: "httpssvc", perClientPrefix: "httpssvc-pc"},
+    { rrtype: "A"},
+    { rrtype: "A", noedns0: true },
+    { rrtype: "A", checking_disabled: true },
+    { rrtype: "A", dnssec_ok: true },
+    { rrtype: "A", dnssec_ok: true, checking_disabled: true },
+    { rrtype: "DNSKEY", dnssec_ok: true },
+    { rrtype: "RRSIG"},
+    { rrtype: "NEWONE"},
+    { rrtype: "NEWTWO"},
+    { rrtype: "NEWTHREE"},
+    { rrtype: "NEWFOUR"}
 ];
 
 const STUDY_START = "STUDY_START";
@@ -63,15 +72,22 @@ var dnsData = {};
 
 var dnsAttempts = {};
 
+
+// For tests
+function resetState() {
+    dnsData = {};
+    dnsAttempts = {};
+}
+
 function logMessage(...args) {
     if (loggingEnabled) {
         console.log(...args);
     }
 }
 
-function assert(isTrue) {
+function assert(isTrue, message) {
     if (!isTrue) {
-        throw new Error();
+        throw new Error(message);
     }
 }
 
@@ -137,8 +153,10 @@ function shuffleArray(array) {
 
 /**
  * Encode a DNS query to be sent over a UDP socket
+ * @param {string} domain
+ * @param {QueryConfig} query
  */
-function encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled, noedns0) {
+function encodeUDPQuery(domain, { rrtype, dnssec_ok, checking_disabled, noedns0 }) {
     let buf;
     let type = 'query';
     let id = Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID;    // Generate a random transaction ID between 0 and 65535
@@ -166,8 +184,10 @@ function encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled, noedns0) {
 
 /**
  * Encode a DNS query to be sent over a TCP socket
+ * @param {string} domain
+ * @param {QueryConfig} query
  */
-function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
+function encodeTCPQuery(domain, {rrtype, dnssec_ok, checking_disabled}) {
     let buf;
     let type = 'query';
     let id = Math.floor(Math.random() * (MAX_TXID - MIN_TXID + 1)) + MIN_TXID;    // Generate a random transaction ID between 0 and 65535
@@ -192,6 +212,8 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
     return buf
 }
 
+
+const sendDNSQuery = {};
 /**
  * Send a DNS query for an A record over UDP using the WebExtensions
  * dns.resolve() API
@@ -205,16 +227,16 @@ function encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled) {
  * used. We make sure that DoH is not used and that A records are queried,
  * rather than AAAA.
  */
-async function sendUDPWebExtQuery(domain) {
+sendDNSQuery.system = async (domain) => {
     let key = "udpAWebExt";
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
 
     try {
-        dnsAttempts[key] += 1
+        dnsAttempts[key] = (dnsAttempts[key] || 0) + 1
         let response = await browser.dns.resolve(domain, flags);
         logDNSResponse(response.addresses, key);
         // If we don't already have a response saved in dnsData, save this one
-        if (!dnsData[key] == 0) {
+        if (!dnsData[key]) {
             dnsData[key] = response.addresses;
         }
         return;
@@ -222,10 +244,10 @@ async function sendUDPWebExtQuery(domain) {
         logMessage("DNS resolution failed " + e);
         let errorReason = STUDY_ERROR_UDP_WEBEXT;
         sendTelemetry({reason: errorReason,
-                       errorRRTYPE: key,
-                       errorAttempt: dnsAttempts[key]});
+                    errorRRTYPE: key,
+                    errorAttempt: dnsAttempts[key]});
     }
-}
+};
 
 /**
  * Send a DNS query over UDP, re-transmitting according to default
@@ -235,13 +257,13 @@ async function sendUDPWebExtQuery(domain) {
  * we find. The timeout for each missing response is RESOLVCONF_TIMEOUT
  * (5000 ms).
  */
-async function sendUDPQuery(key, domain, query, nameservers) {
-    let { rrtype, dnssec_ok, checking_disabled, noedns0 } = query;
-    
+ sendDNSQuery.udp = async (key, domain, query, nameservers) => {
+    let { rrtype } = query;
+
     logMessage("UDP: " + rrtype + "? " + domain + " " + key);
     let queryBuf;
     try {
-        queryBuf = encodeUDPQuery(domain, rrtype, dnssec_ok, checking_disabled, noedns0);
+        queryBuf = encodeUDPQuery(domain, query);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_UDP_ENCODE});
         throw new Error(STUDY_ERROR_UDP_ENCODE);
@@ -250,7 +272,7 @@ async function sendUDPQuery(key, domain, query, nameservers) {
     for (let i = 1; i <= RESOLVCONF_ATTEMPTS; i++) {
         for (let nameserver of nameservers) {
             try {
-                dnsAttempts[key] += 1
+                dnsAttempts[key] = (dnsAttempts[key] || 0) + 1;
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
                 logDNSResponse(responseBytes, key, "udp");
 
@@ -262,6 +284,7 @@ async function sendUDPQuery(key, domain, query, nameservers) {
                 // We don't need to re-transmit.
                 return;
             } catch(e) {
+                logMessage(e);
                 let errorReason;
                 if (e.message.startsWith("STUDY_ERROR_UDP")) {
                     errorReason = e.message;
@@ -269,25 +292,23 @@ async function sendUDPQuery(key, domain, query, nameservers) {
                     errorReason = STUDY_ERROR_UDP_MISC;
                 }
                 sendTelemetry({reason: errorReason,
-                               errorRRTYPE: key,
-                               errorAttempt: dnsAttempts[key]});
+                            errorRRTYPE: key,
+                            errorAttempt: dnsAttempts[key]});
             }
         }
     }
-}
+};
 
 /**
  * Send a DNS query over TCP, re-transmitting to another nameserver if we
  * fail to receive a response. We let TCP handle re-transmissions.
  */
-async function sendTCPQuery(key, domain, query, nameservers) {
-    let { rrtype, dnssec_ok, checking_disabled, } = query;
-    
+sendDNSQuery.tcp = async (key, domain, query, nameservers) => {
+    let { rrtype } = query;
     logMessage("TCP: " + rrtype + "? " + domain + " " + key);
-    
     let queryBuf;
     try {
-        queryBuf = encodeTCPQuery(domain, rrtype, dnssec_ok, checking_disabled);
+        queryBuf = encodeTCPQuery(domain, query);
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_TCP_ENCODE});
         throw new Error(STUDY_ERROR_TCP_ENCODE);
@@ -295,7 +316,7 @@ async function sendTCPQuery(key, domain, query, nameservers) {
 
     for (let nameserver of nameservers) {
         try {
-            dnsAttempts[key] += 1;
+            dnsAttempts[key] = (dnsAttempts[key] || 0) + 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
             logDNSResponse(responseBytes, key, "tcp");
 
@@ -307,6 +328,7 @@ async function sendTCPQuery(key, domain, query, nameservers) {
             // We don't need to re-transmit.
             return;
         } catch (e) {
+            logMessage(e);
             let errorReason;
             if (e.message.startsWith("STUDY_ERROR_TCP")) {
                 errorReason = e.message;
@@ -314,12 +336,12 @@ async function sendTCPQuery(key, domain, query, nameservers) {
                 errorReason = STUDY_ERROR_TCP_MISC;
             }
             sendTelemetry({reason: errorReason,
-                           errorRRTYPE: key,
-                           errorAttempt: dnsAttempts[key]});
+                        errorRRTYPE: key,
+                        errorAttempt: dnsAttempts[key]});
 
         }
     }
-}
+};
 
 /**
  * Read the client's nameservers from disk.
@@ -366,7 +388,12 @@ async function readNameservers() {
     return nameservers;
 }
 
-/* Compute the lookup key */
+/**
+ * @param {"udp"|"tcp"} transport
+ * @param {QueryConfig} args
+ * @param {boolean} [perClient]
+ * @returns {string}
+ */
 function computeKey(transport, args, perClient) {
     let tmp = transport + "-" + args.rrtype;
     if (args.dnssec_ok) {
@@ -375,37 +402,39 @@ function computeKey(transport, args, perClient) {
     if (args.checking_disabled) {
         tmp += "CD";
     }
-    if (perClient) {
-        tmp += "-U";
-    }
     if (args.noedns0) {
         tmp += "-N";
     }
-
-    // This is a hack. We register the key in the attempts
-    // table if it hasn't been registered. Otherwise we
-    // needed a lot of copy-and-paste.
-    if (!dnsAttempts[tmp]) {
-        dnsAttempts[tmp] = 0;
+    if (perClient) {
+        tmp += "-U";
     }
 
     return tmp;
 }
 
-function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
-    let sendQuery;
-    if (transport === "udp") {
-        sendQuery = sendUDPQuery;
+/**
+ * @param {string} key
+ * @param {QueryConfig} query
+ * @param {boolean} perClient
+ * @returns string
+ */
+function computeDomain(key, {prefix = "", perClientPrefix = "pc"}, perClient) {
+    if (perClient) {
+        return `${key}-${measurementID}.${perClientPrefix}.${APEX_DOMAIN_NAME}`;
     } else {
-        assert(transport === "tcp");
-        sendQuery = sendTCPQuery;
+        return `${prefix}.${APEX_DOMAIN_NAME}`;
     }
-    const key = computeKey(transport, query, true);
+}
+
+function sendQueryFactory(transport, query, nameservers_ipv4, perClient) {
+    const key = computeKey(transport, query, perClient);
+    const domain = computeDomain(key, query, perClient);
+    assert(transport in sendDNSQuery, `${transport} is not a valid transport type`);
+    let sendQuery = sendDNSQuery[transport];
+
     return () => sendQuery(
         key,
-        isUnique ?
-            query.prefix + key + "-" + measurementID + "." + PER_CLIENT_PREFIX + APEX_DOMAIN_NAME :
-            query.prefix + APEX_DOMAIN_NAME,
+        domain,
         query,
         nameservers_ipv4
     );
@@ -418,7 +447,7 @@ function sendQueryFactory(transport, query, nameservers_ipv4, isUnique) {
 async function sendQueries(nameservers_ipv4) {
     // Add a query for our A record that uses the WebExtensions dns.resolve API as a baseline
     let queries = [];
-    queries.push(() => sendUDPWebExtQuery(APEX_DOMAIN_NAME));
+    queries.push(() => sendDNSQuery.system(APEX_DOMAIN_NAME));
 
     // Add the remaining queries that use the browser's internal socket APIs
     for (let query of COMMON_QUERIES) {
@@ -458,7 +487,7 @@ async function fetchTest() {
         sendTelemetry({reason: STUDY_ERROR_FETCH_FAILED});
         throw new Error(STUDY_ERROR_FETCH_FAILED);
     }
-    if (responseText !== "Hello, world!\n") {
+    if (responseText !== EXPECTED_FETCH_RESPONSE) {
         sendTelemetry({reason: STUDY_ERROR_FETCH_NOT_MATCHED});
         throw new Error(STUDY_ERROR_FETCH_NOT_MATCHED);
     }
@@ -510,11 +539,11 @@ async function runMeasurement(details) {
 /**
  * Entry point for our addon.
  */
-async function main() {
-    measurementID = uuidv4();
+async function main({uuid = uuidv4()} = {}) {
+    measurementID = uuid;
 
     // Turn on logging only if the add-on was installed temporarily
-    loggingEnabled = (await browser.management.getSelf()).installType === "development"
+    loggingEnabled = (await browser.management.getSelf())?.installType === "development"
     logMessage("Logging is enabled");
 
     // If we can't upload telemetry. don't run the addon
@@ -549,4 +578,18 @@ async function main() {
     });
 }
 
-main();
+/* Exports */
+module.exports = {
+    main,
+    resetState,
+    sendDNSQuery,
+    encodeTCPQuery,
+    encodeUDPQuery,
+    computeKey,
+    TELEMETRY_TYPE,
+    STUDY_START,
+    STUDY_MEASUREMENT_COMPLETED,
+    COMMON_QUERIES,
+    EXPECTED_FETCH_RESPONSE,
+    SMIMEA_HASH
+};
