@@ -30,7 +30,7 @@ const COMMON_QUERIES = [
     { rrtype: "A", dnssec_ok: true },
     { rrtype: "A", dnssec_ok: true, checking_disabled: true },
     { rrtype: "DNSKEY", dnssec_ok: true },
-    { rrtype: "RRSIG"},
+    { rrtype: "DS"},
     { rrtype: "NEWONE"},
     { rrtype: "NEWTWO"},
     { rrtype: "NEWTHREE"},

@@ -44,7 +44,7 @@ const ALL_KEY_TYPES = [
     "ACD",
     "ADOCD",
     "DNSKEYDO",
-    "RRSIG",
+    "DS",
     "NEWONE",
     "NEWTWO",
     "NEWTHREE",
