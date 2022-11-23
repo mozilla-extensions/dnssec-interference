@@ -19,8 +19,18 @@ const {
     EXPECTED_FETCH_RESPONSE,
     SMIMEA_HASH
 } = require("../src/dns-test");
-const { assert } = require("chai");
+const chai = require("chai")
+const { assert } = chai;
 const sinon = require("sinon");
+
+// Validate according to the data pipeline schema
+// https://github.com/mozilla-services/mozilla-pipeline-schemas/blob/main/schemas/telemetry/dnssec-study-v1/dnssec-study-v1.4.schema.json
+chai.use(require("chai-json-schema-ajv"));
+const pingSchema = require("./dnssec-v1.schema.json");
+const payloadSchema = {
+    definitions: pingSchema.definitions,
+    properties: {payload: pingSchema.properties.payload}
+};
 
 // < Node 18
 global.fetch = global.fetch || require("node-fetch");
@@ -143,6 +153,7 @@ function assertPingSent(reason, customMatch) {
         sinon.match((payload => {
             if (payload.reason === reason) {
                 if (customMatch) {
+                    assert.jsonSchema(payload, payloadSchema);
                     return customMatch(payload);
                 }
                 return true;

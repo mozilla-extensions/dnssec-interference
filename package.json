@@ -32,7 +32,9 @@
     "lint": "echo 'lint not implemented'"
   },
   "devDependencies": {
+    "ajv": "^5.5.2",
     "chai": "^4.3.6",
+    "chai-json-schema-ajv": "^5.2.4",
     "eslint": "^7.6.0",
     "mocha": "^10.1.0",
     "node-fetch": "^2.6.7",
