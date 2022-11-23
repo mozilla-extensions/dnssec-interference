@@ -17,20 +17,31 @@ const {
     STUDY_MEASUREMENT_COMPLETED,
     COMMON_QUERIES,
     EXPECTED_FETCH_RESPONSE,
-    SMIMEA_HASH
+    SMIMEA_HASH,
+    APEX_DOMAIN_NAME
 } = require("../src/dns-test");
 const chai = require("chai")
 const { assert } = chai;
 const sinon = require("sinon");
+const { v4: uuidv4 } = require("uuid");
 
 // Validate according to the data pipeline schema
 // https://github.com/mozilla-services/mozilla-pipeline-schemas/blob/main/schemas/telemetry/dnssec-study-v1/dnssec-study-v1.4.schema.json
-chai.use(require("chai-json-schema-ajv"));
+const Ajv = require("ajv");
+const ajv = new Ajv();
 const pingSchema = require("./dnssec-v1.schema.json");
 const payloadSchema = {
     definitions: pingSchema.definitions,
-    properties: {payload: pingSchema.properties.payload}
+    properties: {
+        payload: pingSchema.properties.payload
+    }
 };
+
+function validatePayload(payload) {
+    const validate = ajv.compile(payloadSchema);
+    const valid = validate({payload});
+    assert.isOk(valid, "not a valid payload:\n" + JSON.stringify(validate.errors, null, 2));
+}
 
 // < Node 18
 global.fetch = global.fetch || require("node-fetch");
@@ -39,8 +50,9 @@ global.fetch = global.fetch || require("node-fetch");
  * Some fake configuration
  */
 const FAKE_NAMESERVERS = ["172.19.134.11", "172.19.134.12"];
+const FAKE_WEBEXT_RESP = ["34.120.4.181"];
 const FAKE_DNSQUERY_RESP = [1, 2, 3];
-const FAKE_UUID = "fakeuuid";
+const FAKE_UUID = uuidv4();
 /**
  * This is a list of all key types we expect to see in the final ping.
  * Each item will have 4 variants: tcp, udp, tcp per-client, udp per-client
@@ -65,7 +77,7 @@ const ALL_KEY_TYPES = [
         `tcp-${baseKey}`,
         `udp-${baseKey}`,
         `tcp-${baseKey}-U`,
-        `udp-${baseKey}-U`,
+        `udp-${baseKey}-U`
     ];
 }, []);
 
@@ -75,21 +87,21 @@ const ALL_KEY_TYPES = [
  */
 const EXPECTED_QUERY_CHECK = [
     // A few A records with various flags
-    ["tcp", "tcp-A", "dnssec-experiment-moz.net"],
-    ["udp", "udp-A", "dnssec-experiment-moz.net"],
-    ["tcp", "tcp-ADO", "dnssec-experiment-moz.net"],
-    ["udp", "udp-ADOCD", "dnssec-experiment-moz.net"],
-    ["tcp", "tcp-A-N-U", `tcp-A-N-U-${FAKE_UUID}.pc.dnssec-experiment-moz.net`],
+    ["tcp", "tcp-A", APEX_DOMAIN_NAME],
+    ["udp", "udp-A", APEX_DOMAIN_NAME],
+    ["tcp", "tcp-ADO", APEX_DOMAIN_NAME],
+    ["udp", "udp-ADOCD", APEX_DOMAIN_NAME],
+    ["tcp", "tcp-A-N-U", `tcp-A-N-U-${FAKE_UUID}.pc.${APEX_DOMAIN_NAME}`],
 
     // HTTPS records should have a prefix
-    ["tcp", "tcp-HTTPS", "httpssvc.dnssec-experiment-moz.net"],
-    ["tcp", "tcp-HTTPS-U", `tcp-HTTPS-U-${FAKE_UUID}.httpssvc-pc.dnssec-experiment-moz.net`],
-    ["udp", "udp-HTTPS", "httpssvc.dnssec-experiment-moz.net"],
-    ["udp", "udp-HTTPS-U", `udp-HTTPS-U-${FAKE_UUID}.httpssvc-pc.dnssec-experiment-moz.net`],
+    ["tcp", "tcp-HTTPS", "httpssvc." + APEX_DOMAIN_NAME],
+    ["tcp", "tcp-HTTPS-U", `tcp-HTTPS-U-${FAKE_UUID}.httpssvc-pc.${APEX_DOMAIN_NAME}`],
+    ["udp", "udp-HTTPS", "httpssvc." + APEX_DOMAIN_NAME],
+    ["udp", "udp-HTTPS-U", `udp-HTTPS-U-${FAKE_UUID}.httpssvc-pc.${APEX_DOMAIN_NAME}`],
 
     // SMIMEA records should have the right SMIMEA structure
-    ["tcp", "tcp-SMIMEA", SMIMEA_HASH + "._smimecert.dnssec-experiment-moz.net"],
-    ["udp", "udp-SMIMEA-U", `udp-SMIMEA-U-${FAKE_UUID}._smimecert.pc.dnssec-experiment-moz.net`],
+    ["tcp", "tcp-SMIMEA", SMIMEA_HASH + "._smimecert." + APEX_DOMAIN_NAME],
+    ["udp", "udp-SMIMEA-U", `udp-SMIMEA-U-${FAKE_UUID}._smimecert.pc.${APEX_DOMAIN_NAME}`],
 ];
 
 function mockFetch(url, text) {
@@ -125,10 +137,10 @@ async function setupMeasurementEnvironment(sandbox) {
     browser.captivePortal.getState.resolves("not_captive");
     browser.runtime.getPlatformInfo.resolves({os: "win"});
 
-    mockFetch("https://dnssec-experiment-moz.net/", EXPECTED_FETCH_RESPONSE);
+    mockFetch(`https://${APEX_DOMAIN_NAME}/`, EXPECTED_FETCH_RESPONSE);
 
     browser.experiments.resolvconf.readNameserversWin.resolves(FAKE_NAMESERVERS);
-    browser.dns.resolve.resolves({addresses: FAKE_DNSQUERY_RESP})
+    browser.dns.resolve.resolves({addresses: FAKE_WEBEXT_RESP})
     browser.experiments.tcpsocket.sendDNSQuery.resolves(Buffer.from(FAKE_DNSQUERY_RESP));
     browser.experiments.udpsocket.sendDNSQuery.resolves(Buffer.from(FAKE_DNSQUERY_RESP));
 }
@@ -153,7 +165,7 @@ function assertPingSent(reason, customMatch) {
         sinon.match((payload => {
             if (payload.reason === reason) {
                 if (customMatch) {
-                    assert.jsonSchema(payload, payloadSchema);
+                    validatePayload(payload);
                     return customMatch(payload);
                 }
                 return true;
@@ -193,7 +205,7 @@ describe("dns-test.js", () => {
             assert.equal(computeKey("tcp", {rrtype: "A"}, true), "tcp-A-U");
         });
         it("should compute a key for a DO record", () => {
-            assert.equal(computeKey("udp", {rrtype: "DNSKEY", dnssec_ok: true}), "udp-DNSKEYDO");
+            assert.equal(computeKey("udp", {rrtype: "A", dnssec_ok: true}), "udp-ADO");
         });
         it("should compute a key for a CD record", () => {
             assert.equal(computeKey("udp", {rrtype: "A", checking_disabled: true}), "udp-ACD");
@@ -209,47 +221,50 @@ describe("dns-test.js", () => {
             assertPingSent(STUDY_START);
         });
 
-        it("should send a STUDY_MEASUREMENT_COMPLETED ping with the right number of keys", async () => {
+        it("should send a valid STUDY_MEASUREMENT_COMPLETED ping with the right number of keys", async () => {
             await run();
             /**
-             * The total number of expected entries is 1 for the system DNS query + 4 queries
-             * for each item in the COMMON_QUERY config.
+             * The total number of expected entries 2 queries for each item in the COMMON_QUERY config,
+             * and 1 extra (for the webExtA) in non-per-client data
              */
-            assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({dnsData, dnsAttempts}) => {
-                const expectedCount =  1 + COMMON_QUERIES.length * 4;
-                assert.lengthOf(Object.keys(dnsData), expectedCount);
-                assert.lengthOf(Object.keys(dnsAttempts), expectedCount);
+            assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({
+                dnsData,
+                dnsAttempts,
+            }) => {
+                assert.lengthOf(Object.keys(dnsData),  1 + COMMON_QUERIES.length * 4);
+                assert.lengthOf(Object.keys(dnsAttempts),  1 + COMMON_QUERIES.length * 4);
                 return true;
             });
         });
 
         it("should send a STUDY_MEASUREMENT_COMPLETED ping with the right data", async () => {
             await run();
-            const expectedAttempts = { udpAWebExt: 1 };
-            const expectedData = { udpAWebExt: FAKE_DNSQUERY_RESP };
+            const expected = {
+                reason: STUDY_MEASUREMENT_COMPLETED,
+                measurementID: FAKE_UUID,
+                dnsAttempts: { udpAWebExt: 1 },
+                dnsData: { udpAWebExt: FAKE_WEBEXT_RESP },
+                dnsQueryErrors: [],
+                hasErrors: false
+            };
 
             ALL_KEY_TYPES.forEach(key => {
-                expectedAttempts[key] = 1;
-                expectedData[key] = FAKE_DNSQUERY_RESP
+                expected.dnsAttempts[key] = 1;
+                expected.dnsData[key] = FAKE_DNSQUERY_RESP;
             });
 
-            assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({dnsAttempts, dnsData}) => {
+            assertPingSent(STUDY_MEASUREMENT_COMPLETED, (payload) => {
                 assert.deepEqual(
-                    dnsAttempts,
-                    expectedAttempts,
-                    "dnsAttempts should exist and have 1 attempt"
-                );
-                assert.deepEqual(
-                    dnsData,
-                    expectedData,
-                    "dnsData should exist and have the right response"
+                    payload,
+                    expected,
+                    "should have all the expected data"
                 );
                 return true;
             });
         });
         it("should send a STUDY_MEASUREMENT_COMPLETED ping with the correct data when tcp reattempts were made", async () => {
             const expectedAttempts = { udpAWebExt: 1 };
-            const expectedData = { udpAWebExt: FAKE_DNSQUERY_RESP };
+            const expectedData = { udpAWebExt: FAKE_WEBEXT_RESP };
 
             // Ensure tcpsocket fails only for the first nameserver
             browser.experiments.tcpsocket.sendDNSQuery.withArgs(FAKE_NAMESERVERS[0]).throws();
@@ -261,11 +276,27 @@ describe("dns-test.js", () => {
                 expectedData[key] = FAKE_DNSQUERY_RESP
             });
 
-            assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({dnsAttempts, dnsData}) => {
+            assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({dnsAttempts, dnsData, dnsQueryErrors}) => {
                 assert.deepEqual(
                     dnsAttempts,
                     expectedAttempts,
                     "dnsAttempts should exist and have 1 attempt"
+                );
+                assert.includeDeepMembers(
+                    dnsQueryErrors,
+                    [
+                        {
+                            reason: 'STUDY_ERROR_TCP_MISC',
+                            errorRRTYPE: 'tcp-DNSKEYDO-U',
+                            errorAttempt: 1
+                        },
+                        {
+                            reason: 'STUDY_ERROR_TCP_MISC',
+                            errorRRTYPE: 'tcp-A',
+                            errorAttempt: 1
+                      }
+                    ],
+                    "errors were logged"
                 );
                 assert.deepEqual(
                     dnsData,
@@ -277,8 +308,8 @@ describe("dns-test.js", () => {
         });
 
         it("should send STUDY_MEASUREMENT_COMPLETED even when some queries fail", async () => {
-            browser.experiments.udpsocket.sendDNSQuery.withArgs("dnssec-experiment-moz.net").throws();
-            browser.experiments.tcpsocket.sendDNSQuery.withArgs("dnssec-experiment-moz.net").throws();
+            browser.experiments.udpsocket.sendDNSQuery.withArgs(APEX_DOMAIN_NAME).throws();
+            browser.experiments.tcpsocket.sendDNSQuery.withArgs(APEX_DOMAIN_NAME).throws();
 
             await run();
 
@@ -289,7 +320,7 @@ describe("dns-test.js", () => {
     describe("queries", () => {
         it("should send the control query", async () => {
             await run();
-            sinon.assert.calledOnceWithMatch(sendDNSQuery.system, "dnssec-experiment-moz.net");
+            sinon.assert.calledOnceWithMatch(sendDNSQuery.system, APEX_DOMAIN_NAME);
         });
 
         it("should send the expected tcp and udp queries", async () => {
