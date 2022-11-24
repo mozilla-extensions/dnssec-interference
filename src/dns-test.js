@@ -129,11 +129,12 @@ function logDNSResponse(resp, key, transport) {
             parsed = DNS_PACKET.decode(Buffer.from(resp));
         }
         if (parsed) {
+            const hasAnswers = parsed.answers?.length > 0;
             logMessage(
                 `DNS Query for ${key}:\n` +
-                `[Q] ${parsed.questions?.map(({name, type}) => `${name} ${type}`).join(",")}\n` +
-                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${name} ${type} ${stringifyAndTruncate(data)}`).join("\n    ")} `,
-                'color: green;',
+                `[Q] ${parsed.questions?.map(({name, type}) => `${type} ${name}`).join(",")}\n` +
+                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${type} ${name} $${stringifyAndTruncate(data)}`).join("\n    ") || "No answers\n"} `,
+                (hasAnswers ? 'color: green;' : 'color: red;'),
             );
         } else {
             logMessage("Control DNS Query", resp);

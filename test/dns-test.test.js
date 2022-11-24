@@ -224,8 +224,8 @@ describe("dns-test.js", () => {
         it("should send a valid STUDY_MEASUREMENT_COMPLETED ping with the right number of keys", async () => {
             await run();
             /**
-             * The total number of expected entries 2 queries for each item in the COMMON_QUERY config,
-             * and 1 extra (for the webExtA) in non-per-client data
+             * The total number of expected entries 4 queries for each item in the COMMON_QUERY config,
+             * and 1 extra (for the webExtA)
              */
             assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({
                 dnsData,
