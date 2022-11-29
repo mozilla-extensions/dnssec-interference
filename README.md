@@ -5,7 +5,7 @@ The DNS responses (or lack thereof) are then sent to Mozilla's telemetry
 servers for analysis.
 
 The entry point for the 
-addon is `src/dns-test.js`, which is converted into a script named 
+addon is `src/index.js`, which is converted into a script named
 `src/background.js` at addon build time through [browserify](https://browserify.org/).
 This enables us to bundle Node.js dependencies with our addon code.
 
@@ -13,7 +13,7 @@ The experimental APIs
 that are necessary for opening UDP/TCP sockets and reading which nameservers a 
 client is using are located in `src/experiments`. The addon also uses a [modified
 form](https://github.com/mozilla/dns-packet) of the [dns-packet](https://github.com/mafintosh/dns-packet) Node.js module, 
-which enables us to send queries for SMIMEA records, HTTPS records, and two new 
+which enables us to send queries for SMIMEA records, HTTPS records, and two new
 record types we created that are not standardized.
 
 ## Problem Description 
@@ -29,6 +29,7 @@ To understand the extent to which network middleboxes between clients and recurs
 At a high-level, we will first serve the above record types from domain names in a zone that we control (e.g., `*.dnssec-experiment-moz.net`). We will then induce Firefox clients to request the following record types from domain names in our zone over UDP and TCP:
 
 - A
+- A without EDNS0
 - A (w/ DO=0, CD=1)
 - A (w/ DO=1, CD=0)
 - A (w/ DO=1, CD=1)
