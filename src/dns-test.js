@@ -4,7 +4,7 @@ const { Buffer } = require("buffer");
 const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
-const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
+const APEX_DOMAIN_NAME = "dns-study.com";
 const SMIMEA_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15";
 const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
 
@@ -72,16 +72,24 @@ var dnsData = {};
 
 var dnsAttempts = {};
 
+var dnsQueryErrors = [];
 
 // For tests
 function resetState() {
     dnsData = {};
     dnsAttempts = {};
+    dnsQueryErrors = [];
 }
 
 function logMessage(...args) {
     if (loggingEnabled) {
         console.log(...args);
+    }
+}
+
+function logError(...args) {
+    if (loggingEnabled) {
+        console.error(...args);
     }
 }
 
@@ -121,11 +129,12 @@ function logDNSResponse(resp, key, transport) {
             parsed = DNS_PACKET.decode(Buffer.from(resp));
         }
         if (parsed) {
+            const hasAnswers = parsed.answers?.length > 0;
             logMessage(
                 `DNS Query for ${key}:\n` +
-                `[Q] ${parsed.questions?.map(({name, type}) => `${name} ${type}`).join(",")}\n` +
-                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${name} ${type} ${stringifyAndTruncate(data)}`).join("\n    ")} `,
-                'color: green;',
+                `[Q] ${parsed.questions?.map(({name, type}) => `${type} ${name}`).join(",")}\n` +
+                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${type} ${name} $${stringifyAndTruncate(data)}`).join("\n    ") || "No answers\n"} `,
+                (hasAnswers ? 'color: green;' : 'color: red;'),
             );
         } else {
             logMessage("Control DNS Query", resp);
@@ -241,9 +250,9 @@ sendDNSQuery.system = async (domain) => {
         }
         return;
     } catch(e) {
-        logMessage("DNS resolution failed " + e);
+        logError(e, "DNS resolution failed");
         let errorReason = STUDY_ERROR_UDP_WEBEXT;
-        sendTelemetry({reason: errorReason,
+        dnsQueryErrors.push({reason: errorReason,
                     errorRRTYPE: key,
                     errorAttempt: dnsAttempts[key]});
     }
@@ -284,14 +293,14 @@ sendDNSQuery.system = async (domain) => {
                 // We don't need to re-transmit.
                 return;
             } catch(e) {
-                logMessage(e);
+                logError(e);
                 let errorReason;
                 if (e.message.startsWith("STUDY_ERROR_UDP")) {
                     errorReason = e.message;
                 } else {
                     errorReason = STUDY_ERROR_UDP_MISC;
                 }
-                sendTelemetry({reason: errorReason,
+                dnsQueryErrors.push({reason: errorReason,
                             errorRRTYPE: key,
                             errorAttempt: dnsAttempts[key]});
             }
@@ -328,14 +337,14 @@ sendDNSQuery.tcp = async (key, domain, query, nameservers) => {
             // We don't need to re-transmit.
             return;
         } catch (e) {
-            logMessage(e);
+            logError(e);
             let errorReason;
             if (e.message.startsWith("STUDY_ERROR_TCP")) {
                 errorReason = e.message;
             } else {
                 errorReason = STUDY_ERROR_TCP_MISC;
             }
-            sendTelemetry({reason: errorReason,
+            dnsQueryErrors.push({reason: errorReason,
                         errorRRTYPE: key,
                         errorAttempt: dnsAttempts[key]});
 
@@ -481,7 +490,7 @@ async function fetchTest() {
 
     let responseText = null;
     try {
-        const response = await fetch("https://dnssec-experiment-moz.net/", {cache: "no-store"});
+        const response = await fetch(`https://${APEX_DOMAIN_NAME}/`, {cache: "no-store"});
         responseText = await response.text();
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_FETCH_FAILED});
@@ -525,9 +534,14 @@ async function runMeasurement(details) {
     await sendQueries(nameservers_ipv4);
 
     // Mark the end of the measurement by sending the DNS responses to telemetry
-    let payload = {reason: STUDY_MEASUREMENT_COMPLETED};
-    payload.dnsData = dnsData;
-    payload.dnsAttempts = dnsAttempts;
+    let payload = {
+        reason: STUDY_MEASUREMENT_COMPLETED,
+        measurementID,
+        dnsData,
+        dnsAttempts,
+        hasErrors: dnsQueryErrors.length > 0,
+        dnsQueryErrors
+    };
 
     // Run the fetch test one more time before submitting our measurements
     await fetchTest();
@@ -591,5 +605,6 @@ module.exports = {
     STUDY_MEASUREMENT_COMPLETED,
     COMMON_QUERIES,
     EXPECTED_FETCH_RESPONSE,
-    SMIMEA_HASH
+    SMIMEA_HASH,
+    APEX_DOMAIN_NAME
 };
