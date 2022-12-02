@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
+const FETCH_ENDPOINT = `https://${APEX_DOMAIN_NAME}/firefox-test-endpoint`;
 const SMIMEA_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15";
 const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
 
@@ -490,7 +491,7 @@ async function fetchTest() {
 
     let responseText = null;
     try {
-        const response = await fetch(`https://${APEX_DOMAIN_NAME}/`, {cache: "no-store"});
+        const response = await fetch(FETCH_ENDPOINT, {cache: "no-store"});
         responseText = await response.text();
     } catch(e) {
         sendTelemetry({reason: STUDY_ERROR_FETCH_FAILED});
@@ -606,5 +607,6 @@ module.exports = {
     COMMON_QUERIES,
     EXPECTED_FETCH_RESPONSE,
     SMIMEA_HASH,
-    APEX_DOMAIN_NAME
+    APEX_DOMAIN_NAME,
+    FETCH_ENDPOINT
 };
