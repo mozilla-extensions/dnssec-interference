@@ -18,7 +18,8 @@ const {
     COMMON_QUERIES,
     EXPECTED_FETCH_RESPONSE,
     SMIMEA_HASH,
-    APEX_DOMAIN_NAME
+    APEX_DOMAIN_NAME,
+    FETCH_ENDPOINT
 } = require("../src/dns-test");
 const chai = require("chai")
 const { assert } = chai;
@@ -137,7 +138,7 @@ async function setupMeasurementEnvironment(sandbox) {
     browser.captivePortal.getState.resolves("not_captive");
     browser.runtime.getPlatformInfo.resolves({os: "win"});
 
-    mockFetch(`https://${APEX_DOMAIN_NAME}/`, EXPECTED_FETCH_RESPONSE);
+    mockFetch(FETCH_ENDPOINT, EXPECTED_FETCH_RESPONSE);
 
     browser.experiments.resolvconf.readNameserversWin.resolves(FAKE_NAMESERVERS);
     browser.dns.resolve.resolves({addresses: FAKE_WEBEXT_RESP})
