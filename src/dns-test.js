@@ -8,6 +8,8 @@ const APEX_DOMAIN_NAME = "dns-study.com";
 const FETCH_ENDPOINT = `https://${APEX_DOMAIN_NAME}/firefox-test-endpoint`;
 const SMIMEA_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15";
 const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
+// How long for the max sleep time
+const DEFAULT_MAX_SLEEP_TIME = 5;
 
 const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
@@ -134,7 +136,7 @@ function logDNSResponse(resp, key, transport) {
             logMessage(
                 `DNS Query for ${key}:\n` +
                 `[Q] ${parsed.questions?.map(({name, type}) => `${type} ${name}`).join(",")}\n` +
-                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${type} ${name} $${stringifyAndTruncate(data)}`).join("\n    ") || "No answers\n"} `,
+                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${type} ${name} ${stringifyAndTruncate(data)}`).join("\n    ") || "No answers\n"} `,
                 (hasAnswers ? 'color: green;' : 'color: red;'),
             );
         } else {
@@ -144,6 +146,17 @@ function logDNSResponse(resp, key, transport) {
         console.warn("Could not log DNS response");
         console.error(error);
     }
+}
+
+function skewRandom(maxSeconds) {
+    let minSeconds = 1; // this is primarily is to avoid race conditions in tests
+    return Math.round((minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000);
+}
+
+function sleepRandom(maxSeconds) {
+    const randomizedMs = skewRandom(maxSeconds);
+    logMessage(`Sleeping ${randomizedMs}ms`);
+    return new Promise(resolve => setTimeout(resolve, randomizedMs));
 }
 
 /**
@@ -454,7 +467,7 @@ function sendQueryFactory(transport, query, nameservers_ipv4, perClient) {
  * For each RR type that we have a DNS record for, attempt to send queries over
  * UDP and TCP.
  */
-async function sendQueries(nameservers_ipv4) {
+async function sendQueries(nameservers_ipv4, sleep) {
     // Add a query for our A record that uses the WebExtensions dns.resolve API as a baseline
     let queries = [];
     queries.push(() => sendDNSQuery.system(APEX_DOMAIN_NAME));
@@ -473,6 +486,9 @@ async function sendQueries(nameservers_ipv4) {
     shuffleArray(queries);
     for (let sendQuery of queries) {
         await sendQuery();
+        if (sleep) {
+            await sleepRandom(sleep);
+        }
     }
 }
 
@@ -506,7 +522,7 @@ async function fetchTest() {
 /**
  * Entry point for our measurements.
  */
-async function runMeasurement(details) {
+async function runMeasurement(details, sleep) {
     /**
      * Only proceed if we're not behind a captive portal, as determined by
      * browser.captivePortal.getState() and browser.captivePortal.onConnectivityAvailable.addListener().
@@ -532,7 +548,7 @@ async function runMeasurement(details) {
     sendTelemetry({reason: STUDY_START});
 
     let nameservers_ipv4 = await readNameservers();
-    await sendQueries(nameservers_ipv4);
+    await sendQueries(nameservers_ipv4, sleep);
 
     // Mark the end of the measurement by sending the DNS responses to telemetry
     let payload = {
@@ -552,9 +568,12 @@ async function runMeasurement(details) {
 }
 
 /**
- * Entry point for our addon.
+ *
+ *
+ * @param {Object} options
+ * @property {string=} uiid A specific UUID to use (or else one is generated)
  */
-async function main({uuid = uuidv4()} = {}) {
+async function main({uuid = uuidv4(), sleep = DEFAULT_MAX_SLEEP_TIME} = {}) {
     measurementID = uuid;
 
     // Turn on logging only if the add-on was installed temporarily
@@ -564,6 +583,7 @@ async function main({uuid = uuidv4()} = {}) {
     // If we can't upload telemetry. don't run the addon
     let canUpload = await browser.telemetry.canUpload();
     if (!canUpload) {
+        logMessage("Aborting, can't upload telemetry");
         throw new Error(STUDY_ERROR_TELEMETRY_CANT_UPLOAD);
     }
 
@@ -574,6 +594,7 @@ async function main({uuid = uuidv4()} = {}) {
     try {
         captiveStatus = await browser.captivePortal.getState();
     } catch(e) {
+        logMessage("Aborting, captive portal");
         sendTelemetry({reason: STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED});
         throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED);
     }
@@ -583,13 +604,13 @@ async function main({uuid = uuidv4()} = {}) {
     // unknown, not_captive, unlocked_portal, or locked_portal.
     if ((captiveStatus === "unlocked_portal") ||
         (captiveStatus === "not_captive")) {
-        await runMeasurement({status: captiveStatus});
+        await runMeasurement({status: captiveStatus}, sleep);
         return;
     }
 
     browser.captivePortal.onConnectivityAvailable.addListener(function listener(details) {
         browser.captivePortal.onConnectivityAvailable.removeListener(listener);
-        runMeasurement(details);
+        runMeasurement(details, sleep);
     });
 }
 
