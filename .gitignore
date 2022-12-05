@@ -3,3 +3,4 @@ node_modules
 dist
 *.pyc
 background.js
+.DS_Store
