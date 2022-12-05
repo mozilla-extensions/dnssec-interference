@@ -134,7 +134,7 @@ function logDNSResponse(resp, key, transport) {
             logMessage(
                 `DNS Query for ${key}:\n` +
                 `[Q] ${parsed.questions?.map(({name, type}) => `${type} ${name}`).join(",")}\n` +
-                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${type} ${name} $${stringifyAndTruncate(data)}`).join("\n    ") || "No answers\n"} `,
+                `%c[A] ${parsed.answers?.map(({name, type, data}) => `${type} ${name} ${stringifyAndTruncate(data)}`).join("\n    ") || "No answers\n"} `,
                 (hasAnswers ? 'color: green;' : 'color: red;'),
             );
         } else {
@@ -144,6 +144,17 @@ function logDNSResponse(resp, key, transport) {
         console.warn("Could not log DNS response");
         console.error(error);
     }
+}
+
+function skewRandom(maxSeconds) {
+    let minSeconds = 1; // this is primarily is to avoid race conditions in tests
+    return Math.round((minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000);
+}
+
+function sleepRandom(maxSeconds) {
+    const randomizedMs = skewRandom(maxSeconds);
+    logMessage(`Sleeping ${randomizedMs}ms`);
+    return new Promise(resolve => setTimeout(resolve, randomizedMs));
 }
 
 /**
@@ -473,6 +484,7 @@ async function sendQueries(nameservers_ipv4) {
     shuffleArray(queries);
     for (let sendQuery of queries) {
         await sendQuery();
+        await sleepRandom(15);
     }
 }
 
@@ -552,18 +564,28 @@ async function runMeasurement(details) {
 }
 
 /**
- * Entry point for our addon.
+ *
+ *
+ * @param {Object} options
+ * @property {"install"|"startup"} trigger Was this an install or a startup run?
+ * @property {string=} uiid A specific UUID to use (or else one is generated)
+
+ * @returns
  */
-async function main({uuid = uuidv4()} = {}) {
+async function main({trigger, uuid = uuidv4()} = {}) {
     measurementID = uuid;
 
     // Turn on logging only if the add-on was installed temporarily
     loggingEnabled = (await browser.management.getSelf())?.installType === "development"
     logMessage("Logging is enabled");
 
+    assert(["install", "startup"].includes(trigger), `${trigger} should be one of: install, startup`);
+    logMessage(`Running dnssec-interference on ${trigger} with id ${uuid}`);
+
     // If we can't upload telemetry. don't run the addon
     let canUpload = await browser.telemetry.canUpload();
     if (!canUpload) {
+        logMessage("Aborting, can't upload telemetry");
         throw new Error(STUDY_ERROR_TELEMETRY_CANT_UPLOAD);
     }
 
@@ -574,6 +596,7 @@ async function main({uuid = uuidv4()} = {}) {
     try {
         captiveStatus = await browser.captivePortal.getState();
     } catch(e) {
+        logMessage("Aborting, captive portal");
         sendTelemetry({reason: STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED});
         throw new Error(STUDY_ERROR_CAPTIVE_PORTAL_API_DISABLED);
     }
