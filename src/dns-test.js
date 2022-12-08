@@ -567,20 +567,14 @@ async function runMeasurement(details) {
  *
  *
  * @param {Object} options
- * @property {"install"|"startup"} trigger Was this an install or a startup run?
  * @property {string=} uiid A specific UUID to use (or else one is generated)
-
- * @returns
  */
-async function main({trigger, uuid = uuidv4()} = {}) {
+async function main({uuid = uuidv4()} = {}) {
     measurementID = uuid;
 
     // Turn on logging only if the add-on was installed temporarily
     loggingEnabled = (await browser.management.getSelf())?.installType === "development"
     logMessage("Logging is enabled");
-
-    assert(["install", "startup"].includes(trigger), `${trigger} should be one of: install, startup`);
-    logMessage(`Running dnssec-interference on ${trigger} with id ${uuid}`);
 
     // If we can't upload telemetry. don't run the addon
     let canUpload = await browser.telemetry.canUpload();
