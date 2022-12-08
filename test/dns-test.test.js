@@ -177,7 +177,7 @@ function assertPingSent(reason, customMatch) {
 }
 
 function run() {
-    return main({ uuid: FAKE_UUID });
+    return main({ uuid: FAKE_UUID, sleep: 0 });
 }
 
 describe("dns-test.js", () => {
