@@ -120,7 +120,7 @@ function stringifyAndTruncate(data) {
  * @param {"tcp"|"udp"} [transport] Optional. If this is omitted, the response won't be parsed.
  * @returns
  */
-function logDNSResponse(resp, key, transport) {
+function logDNSResponse(resp, key, transport, domain) {
     if (!loggingEnabled) {
         return;
     }
@@ -135,12 +135,13 @@ function logDNSResponse(resp, key, transport) {
             const hasAnswers = parsed.answers?.length > 0;
             logMessage(
                 `DNS Query for ${key}:\n` +
+                `${domain}\n` +
                 `[Q] ${parsed.questions?.map(({name, type}) => `${type} ${name}`).join(",")}\n` +
                 `%c[A] ${parsed.answers?.map(({name, type, data}) => `${type} ${name} ${stringifyAndTruncate(data)}`).join("\n    ") || "No answers\n"} `,
                 (hasAnswers ? 'color: green;' : 'color: red;'),
             );
         } else {
-            logMessage("Control DNS Query", resp);
+            logMessage(`Control DNS Query ${key}: ${domain}`, resp);
         }
     } catch (error) {
         console.warn("Could not log DNS response");
@@ -250,14 +251,13 @@ const sendDNSQuery = {};
  * used. We make sure that DoH is not used and that A records are queried,
  * rather than AAAA.
  */
-sendDNSQuery.system = async (domain) => {
-    let key = "udpAWebExt";
+sendDNSQuery.system = async (key, domain) => {
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
 
     try {
         dnsAttempts[key] = (dnsAttempts[key] || 0) + 1
         let response = await browser.dns.resolve(domain, flags);
-        logDNSResponse(response.addresses, key);
+        logDNSResponse(response.addresses, key, "webext", domain);
         // If we don't already have a response saved in dnsData, save this one
         if (!dnsData[key]) {
             dnsData[key] = response.addresses;
@@ -297,7 +297,7 @@ sendDNSQuery.system = async (domain) => {
             try {
                 dnsAttempts[key] = (dnsAttempts[key] || 0) + 1;
                 let responseBytes = await browser.experiments.udpsocket.sendDNSQuery(nameserver, queryBuf, rrtype);
-                logDNSResponse(responseBytes, key, "udp");
+                logDNSResponse(responseBytes, key, "udp", domain);
 
                 // If we don't already have a response saved in dnsData, save this one
                 if (!dnsData[key]) {
@@ -341,7 +341,7 @@ sendDNSQuery.tcp = async (key, domain, query, nameservers) => {
         try {
             dnsAttempts[key] = (dnsAttempts[key] || 0) + 1;
             let responseBytes = await browser.experiments.tcpsocket.sendDNSQuery(nameserver, queryBuf);
-            logDNSResponse(responseBytes, key, "tcp");
+            logDNSResponse(responseBytes, key, "tcp", domain);
 
             // If we don't already have a response saved in dnsData, save this one
             if (!dnsData[key]) {
@@ -470,7 +470,8 @@ function sendQueryFactory(transport, query, nameservers_ipv4, perClient) {
 async function sendQueries(nameservers_ipv4, sleep) {
     // Add a query for our A record that uses the WebExtensions dns.resolve API as a baseline
     let queries = [];
-    queries.push(() => sendDNSQuery.system(APEX_DOMAIN_NAME));
+    queries.push(() => sendDNSQuery.system("udpAWebExt", APEX_DOMAIN_NAME));
+    queries.push(() => sendDNSQuery.system("webext-A-U", computeDomain("webext-A-U", {rrtype: "A"}, true)));
 
     // Add the remaining queries that use the browser's internal socket APIs
     for (let query of COMMON_QUERIES) {
