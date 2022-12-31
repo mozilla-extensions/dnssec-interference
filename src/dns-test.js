@@ -471,7 +471,7 @@ function sendQueryFactory(transport, query, nameservers_ipv4, perClient) {
 async function sendQueries(nameservers_ipv4, sleep) {
     // Add a query for our A record that uses the WebExtensions dns.resolve API as a baseline
     let queries = [];
-    queries.push(() => sendDNSQuery.system("udpAWebExt", APEX_DOMAIN_NAME));
+    queries.push(() => sendDNSQuery.system("webext-A", APEX_DOMAIN_NAME));
     queries.push(() => sendDNSQuery.system("webext-A-U", computeDomain("webext-A-U", {rrtype: "A"}, true)));
 
     // Add the remaining queries that use the browser's internal socket APIs

@@ -226,7 +226,7 @@ describe("dns-test.js", () => {
             await run();
             /**
              * The total number of expected entries 4 queries for each item in the COMMON_QUERY config,
-             * and 2 extra (for the webExtA and webext-A-U queries)
+             * and 2 extra (for the webext-A and webext-A-U queries)
              */
             assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({
                 dnsData,
@@ -243,8 +243,8 @@ describe("dns-test.js", () => {
             const expected = {
                 reason: STUDY_MEASUREMENT_COMPLETED,
                 measurementID: FAKE_UUID,
-                dnsAttempts: { udpAWebExt: 1, "webext-A-U": 1 },
-                dnsData: { udpAWebExt: FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP },
+                dnsAttempts: { "webext-A": 1, "webext-A-U": 1 },
+                dnsData: { "webext-A": FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP },
                 dnsQueryErrors: [],
                 hasErrors: false
             };
@@ -264,8 +264,8 @@ describe("dns-test.js", () => {
             });
         });
         it("should send a STUDY_MEASUREMENT_COMPLETED ping with the correct data when tcp reattempts were made", async () => {
-            const expectedAttempts = { udpAWebExt: 1, "webext-A-U": 1 };
-            const expectedData = { udpAWebExt: FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP };
+            const expectedAttempts = { "webext-A": 1, "webext-A-U": 1 };
+            const expectedData = { "webext-A": FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP };
 
             // Ensure tcpsocket fails only for the first nameserver
             browser.experiments.tcpsocket.sendDNSQuery.withArgs(FAKE_NAMESERVERS[0]).throws();
@@ -322,7 +322,7 @@ describe("dns-test.js", () => {
         it("should send two control queries, one basic and one to the per-client domain", async () => {
             await run();
             sinon.assert.calledTwice(sendDNSQuery.system);
-            sinon.assert.calledWithMatch(sendDNSQuery.system, "udpAWebExt", APEX_DOMAIN_NAME);
+            sinon.assert.calledWithMatch(sendDNSQuery.system, "webext-A", APEX_DOMAIN_NAME);
             sinon.assert.calledWithMatch(sendDNSQuery.system, "webext-A-U", "webext-A-U-" + FAKE_UUID + ".pc." + APEX_DOMAIN_NAME);
         });
 
