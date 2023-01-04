@@ -446,7 +446,7 @@ function computeDomain(key, {prefix = "", perClientPrefix = "pc"}, perClient) {
     if (perClient) {
         return `${key}-${measurementID}.${perClientPrefix}.${APEX_DOMAIN_NAME}`;
     } else {
-        return `${prefix}.${APEX_DOMAIN_NAME}`;
+        return prefix ? `${prefix}.${APEX_DOMAIN_NAME}` : APEX_DOMAIN_NAME;
     }
 }
 
@@ -633,6 +633,7 @@ module.exports = {
     encodeTCPQuery,
     encodeUDPQuery,
     computeKey,
+    computeDomain,
     TELEMETRY_TYPE,
     STUDY_START,
     STUDY_MEASUREMENT_COMPLETED,

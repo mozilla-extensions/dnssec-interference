@@ -11,6 +11,7 @@ const {
     main,
     resetState,
     computeKey,
+    computeDomain,
     sendDNSQuery,
     TELEMETRY_TYPE,
     STUDY_START,
@@ -178,8 +179,8 @@ function assertPingSent(reason, customMatch) {
     );
 }
 
-function run() {
-    return main({ uuid: FAKE_UUID, sleep: 0 });
+function run(opts = {}) {
+    return main({ uuid: FAKE_UUID, sleep: 0, ...opts });
 }
 
 describe("dns-test.js", () => {
@@ -215,6 +216,23 @@ describe("dns-test.js", () => {
         });
         it("should compute a key for a noedns0 + per-client record", () => {
             assert.equal(computeKey("udp", {rrtype: "A", noedns0: true}, true), "udp-A-N-U");
+        });
+    });
+
+    describe("computeDomain", async () => {
+        await run({uuid: "foo"});
+
+        it("should compute a non-per-client domain", () => {
+            assert.equal(computeDomain("tcp-A", {rrtype: "A"}, false), APEX_DOMAIN_NAME);
+        });
+        it("should add a prefix for a non-per-client domain", () => {
+            assert.equal(computeDomain("udp-HTTPS-U", {rrtype: "HTTPS", prefix: "httpssvc"}, false), "httpssvc." + APEX_DOMAIN_NAME);
+        });
+        it("should compute a per-client domain", () => {
+            assert.equal(computeDomain("udp-A-U", {rrtype: "A", }, true), `udp-A-U-foo.pc.` + APEX_DOMAIN_NAME);
+        });
+        it("should compute a per-client domain with custom prefix", () => {
+            assert.equal(computeDomain("udp-HTTPS-U", {rrtype: "HTTPS", perClientPrefix: "httpssvc-pc."}, true), `udp-A-U-foo.httpssvc-pc.` + APEX_DOMAIN_NAME);
         });
     });
 
