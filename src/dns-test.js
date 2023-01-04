@@ -552,6 +552,13 @@ async function runMeasurement(details, sleep) {
     let nameservers_ipv4 = await readNameservers();
     await sendQueries(nameservers_ipv4, sleep);
 
+    let addonVersion;
+    try {
+        addonVersion = browser.runtime.getManifest().version
+    } catch (err) {
+        console.error(err);
+    }
+
     // Mark the end of the measurement by sending the DNS responses to telemetry
     let payload = {
         reason: STUDY_MEASUREMENT_COMPLETED,
@@ -559,7 +566,9 @@ async function runMeasurement(details, sleep) {
         dnsData,
         dnsAttempts,
         hasErrors: dnsQueryErrors.length > 0,
-        dnsQueryErrors
+        dnsQueryErrors,
+        addonVersion,
+        apexDomain: APEX_DOMAIN_NAME
     };
 
     // Run the fetch test one more time before submitting our measurements

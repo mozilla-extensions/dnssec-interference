@@ -137,6 +137,8 @@ async function setupMeasurementEnvironment(sandbox) {
     browser.telemetry.canUpload.resolves(true);
     browser.captivePortal.getState.resolves("not_captive");
     browser.runtime.getPlatformInfo.resolves({os: "win"});
+    browser.runtime.getManifest.returns({version: "1.2.3"})
+
 
     mockFetch(FETCH_ENDPOINT, EXPECTED_FETCH_RESPONSE);
 
@@ -246,7 +248,9 @@ describe("dns-test.js", () => {
                 dnsAttempts: { "webext-A": 1, "webext-A-U": 1 },
                 dnsData: { "webext-A": FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP },
                 dnsQueryErrors: [],
-                hasErrors: false
+                hasErrors: false,
+                addonVersion: "1.2.3",
+                apexDomain: APEX_DOMAIN_NAME
             };
 
             ALL_KEY_TYPES.forEach(key => {
