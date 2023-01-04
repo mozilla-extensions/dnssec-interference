@@ -12,7 +12,7 @@ const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
 // Disable this for now, we don't need it
 const DEFAULT_MAX_SLEEP_TIME = 0;
 
-const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
+const RESOLVCONF_ATTEMPTS = 3; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
 /**
  * @typedef {Object} QueryConfig
@@ -446,7 +446,7 @@ function computeDomain(key, {prefix = "", perClientPrefix = "pc"}, perClient) {
     if (perClient) {
         return `${key}-${measurementID}.${perClientPrefix}.${APEX_DOMAIN_NAME}`;
     } else {
-        return `${prefix}.${APEX_DOMAIN_NAME}`;
+        return prefix ? `${prefix}.${APEX_DOMAIN_NAME}` : APEX_DOMAIN_NAME;
     }
 }
 
@@ -552,6 +552,13 @@ async function runMeasurement(details, sleep) {
     let nameservers_ipv4 = await readNameservers();
     await sendQueries(nameservers_ipv4, sleep);
 
+    let addonVersion;
+    try {
+        addonVersion = browser.runtime.getManifest().version
+    } catch (err) {
+        console.error(err);
+    }
+
     // Mark the end of the measurement by sending the DNS responses to telemetry
     let payload = {
         reason: STUDY_MEASUREMENT_COMPLETED,
@@ -559,7 +566,9 @@ async function runMeasurement(details, sleep) {
         dnsData,
         dnsAttempts,
         hasErrors: dnsQueryErrors.length > 0,
-        dnsQueryErrors
+        dnsQueryErrors,
+        addonVersion,
+        apexDomain: APEX_DOMAIN_NAME
     };
 
     // Run the fetch test one more time before submitting our measurements
@@ -624,6 +633,7 @@ module.exports = {
     encodeTCPQuery,
     encodeUDPQuery,
     computeKey,
+    computeDomain,
     TELEMETRY_TYPE,
     STUDY_START,
     STUDY_MEASUREMENT_COMPLETED,

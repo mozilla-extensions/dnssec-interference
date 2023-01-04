@@ -11,6 +11,7 @@ const {
     main,
     resetState,
     computeKey,
+    computeDomain,
     sendDNSQuery,
     TELEMETRY_TYPE,
     STUDY_START,
@@ -137,6 +138,8 @@ async function setupMeasurementEnvironment(sandbox) {
     browser.telemetry.canUpload.resolves(true);
     browser.captivePortal.getState.resolves("not_captive");
     browser.runtime.getPlatformInfo.resolves({os: "win"});
+    browser.runtime.getManifest.returns({version: "1.2.3"})
+
 
     mockFetch(FETCH_ENDPOINT, EXPECTED_FETCH_RESPONSE);
 
@@ -176,8 +179,8 @@ function assertPingSent(reason, customMatch) {
     );
 }
 
-function run() {
-    return main({ uuid: FAKE_UUID, sleep: 0 });
+function run(opts = {}) {
+    return main({ uuid: FAKE_UUID, sleep: 0, ...opts });
 }
 
 describe("dns-test.js", () => {
@@ -216,6 +219,23 @@ describe("dns-test.js", () => {
         });
     });
 
+    describe("computeDomain", async () => {
+        await run({uuid: "foo"});
+
+        it("should compute a non-per-client domain", () => {
+            assert.equal(computeDomain("tcp-A", {rrtype: "A"}, false), APEX_DOMAIN_NAME);
+        });
+        it("should add a prefix for a non-per-client domain", () => {
+            assert.equal(computeDomain("udp-HTTPS-U", {rrtype: "HTTPS", prefix: "httpssvc"}, false), "httpssvc." + APEX_DOMAIN_NAME);
+        });
+        it("should compute a per-client domain", () => {
+            assert.equal(computeDomain("udp-A-U", {rrtype: "A", }, true), `udp-A-U-foo.pc.` + APEX_DOMAIN_NAME);
+        });
+        it("should compute a per-client domain with custom prefix", () => {
+            assert.equal(computeDomain("udp-HTTPS-U", {rrtype: "HTTPS", perClientPrefix: "httpssvc-pc."}, true), `udp-A-U-foo.httpssvc-pc.` + APEX_DOMAIN_NAME);
+        });
+    });
+
     describe("pings", () => {
         it("should send a STUDY_START ping", async () => {
             await run();
@@ -246,7 +266,9 @@ describe("dns-test.js", () => {
                 dnsAttempts: { "webext-A": 1, "webext-A-U": 1 },
                 dnsData: { "webext-A": FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP },
                 dnsQueryErrors: [],
-                hasErrors: false
+                hasErrors: false,
+                addonVersion: "1.2.3",
+                apexDomain: APEX_DOMAIN_NAME
             };
 
             ALL_KEY_TYPES.forEach(key => {
