@@ -12,7 +12,7 @@ const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
 // Disable this for now, we don't need it
 const DEFAULT_MAX_SLEEP_TIME = 0;
 
-const RESOLVCONF_ATTEMPTS = 2; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
+const RESOLVCONF_ATTEMPTS = 3; // Number of UDP attempts per nameserver. We let TCP handle re-transmissions on its own.
 
 /**
  * @typedef {Object} QueryConfig
