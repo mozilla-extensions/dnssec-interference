@@ -11,6 +11,7 @@ const {
     main,
     resetState,
     computeKey,
+    computeDomain,
     sendDNSQuery,
     TELEMETRY_TYPE,
     STUDY_START,
@@ -137,6 +138,8 @@ async function setupMeasurementEnvironment(sandbox) {
     browser.telemetry.canUpload.resolves(true);
     browser.captivePortal.getState.resolves("not_captive");
     browser.runtime.getPlatformInfo.resolves({os: "win"});
+    browser.runtime.getManifest.returns({version: "1.2.3"})
+
 
     mockFetch(FETCH_ENDPOINT, EXPECTED_FETCH_RESPONSE);
 
@@ -176,8 +179,8 @@ function assertPingSent(reason, customMatch) {
     );
 }
 
-function run() {
-    return main({ uuid: FAKE_UUID, sleep: 0 });
+function run(opts = {}) {
+    return main({ uuid: FAKE_UUID, sleep: 0, ...opts });
 }
 
 describe("dns-test.js", () => {
@@ -216,6 +219,23 @@ describe("dns-test.js", () => {
         });
     });
 
+    describe("computeDomain", async () => {
+        await run({uuid: "foo"});
+
+        it("should compute a non-per-client domain", () => {
+            assert.equal(computeDomain("tcp-A", {rrtype: "A"}, false), APEX_DOMAIN_NAME);
+        });
+        it("should add a prefix for a non-per-client domain", () => {
+            assert.equal(computeDomain("udp-HTTPS-U", {rrtype: "HTTPS", prefix: "httpssvc"}, false), "httpssvc." + APEX_DOMAIN_NAME);
+        });
+        it("should compute a per-client domain", () => {
+            assert.equal(computeDomain("udp-A-U", {rrtype: "A", }, true), `udp-A-U-foo.pc.` + APEX_DOMAIN_NAME);
+        });
+        it("should compute a per-client domain with custom prefix", () => {
+            assert.equal(computeDomain("udp-HTTPS-U", {rrtype: "HTTPS", perClientPrefix: "httpssvc-pc."}, true), `udp-A-U-foo.httpssvc-pc.` + APEX_DOMAIN_NAME);
+        });
+    });
+
     describe("pings", () => {
         it("should send a STUDY_START ping", async () => {
             await run();
@@ -226,14 +246,14 @@ describe("dns-test.js", () => {
             await run();
             /**
              * The total number of expected entries 4 queries for each item in the COMMON_QUERY config,
-             * and 1 extra (for the webExtA)
+             * and 2 extra (for the webext-A and webext-A-U queries)
              */
             assertPingSent(STUDY_MEASUREMENT_COMPLETED, ({
                 dnsData,
                 dnsAttempts,
             }) => {
-                assert.lengthOf(Object.keys(dnsData),  1 + COMMON_QUERIES.length * 4);
-                assert.lengthOf(Object.keys(dnsAttempts),  1 + COMMON_QUERIES.length * 4);
+                assert.lengthOf(Object.keys(dnsData),  2 + COMMON_QUERIES.length * 4);
+                assert.lengthOf(Object.keys(dnsAttempts),  2 + COMMON_QUERIES.length * 4);
                 return true;
             });
         });
@@ -243,10 +263,12 @@ describe("dns-test.js", () => {
             const expected = {
                 reason: STUDY_MEASUREMENT_COMPLETED,
                 measurementID: FAKE_UUID,
-                dnsAttempts: { udpAWebExt: 1 },
-                dnsData: { udpAWebExt: FAKE_WEBEXT_RESP },
+                dnsAttempts: { "webext-A": 1, "webext-A-U": 1 },
+                dnsData: { "webext-A": FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP },
                 dnsQueryErrors: [],
-                hasErrors: false
+                hasErrors: false,
+                addonVersion: "1.2.3",
+                apexDomain: APEX_DOMAIN_NAME
             };
 
             ALL_KEY_TYPES.forEach(key => {
@@ -264,8 +286,8 @@ describe("dns-test.js", () => {
             });
         });
         it("should send a STUDY_MEASUREMENT_COMPLETED ping with the correct data when tcp reattempts were made", async () => {
-            const expectedAttempts = { udpAWebExt: 1 };
-            const expectedData = { udpAWebExt: FAKE_WEBEXT_RESP };
+            const expectedAttempts = { "webext-A": 1, "webext-A-U": 1 };
+            const expectedData = { "webext-A": FAKE_WEBEXT_RESP, "webext-A-U": FAKE_WEBEXT_RESP };
 
             // Ensure tcpsocket fails only for the first nameserver
             browser.experiments.tcpsocket.sendDNSQuery.withArgs(FAKE_NAMESERVERS[0]).throws();
@@ -319,9 +341,11 @@ describe("dns-test.js", () => {
     });
 
     describe("queries", () => {
-        it("should send the control query", async () => {
+        it("should send two control queries, one basic and one to the per-client domain", async () => {
             await run();
-            sinon.assert.calledOnceWithMatch(sendDNSQuery.system, APEX_DOMAIN_NAME);
+            sinon.assert.calledTwice(sendDNSQuery.system);
+            sinon.assert.calledWithMatch(sendDNSQuery.system, "webext-A", APEX_DOMAIN_NAME);
+            sinon.assert.calledWithMatch(sendDNSQuery.system, "webext-A-U", "webext-A-U-" + FAKE_UUID + ".pc." + APEX_DOMAIN_NAME);
         });
 
         it("should send the expected tcp and udp queries", async () => {
