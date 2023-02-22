@@ -467,7 +467,7 @@ async function sendQueries(nameservers_ipv4, sleep) {
 
         { transport: "udp", perClient: false, query: { rrtype: "A", noedns0: true }},
         { transport: "udp", perClient: true, query: { rrtype: "A", noedns0: true }},
-        { key: "webext-A-N-prefix", transport: "udp", perClient: false, query: { prefix: "a-n", rrtype: "A", noedns0: true }},
+        { key: "udp-A-N-prefix", transport: "udp", perClient: false, query: { prefix: "a-n", rrtype: "A", noedns0: true }},
 
         { transport: "udp", perClient: false, query: {rrtype: "NEWONE"}},
         { transport: "udp", perClient: true, query: {rrtype: "NEWONE"}},
