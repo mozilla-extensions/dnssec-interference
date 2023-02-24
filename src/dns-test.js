@@ -261,6 +261,7 @@ sendDNSQuery.webext = async (key, domain) => {
 
     try {
         dnsAttempts[key] = (dnsAttempts[key] || 0) + 1
+
         let response = await browser.dns.resolve(domain, flags);
         logDNSResponse(response.addresses, key, "webext", domain);
         // If we don't already have a response saved in dnsData, save this one
