@@ -76,13 +76,17 @@ var dnsData = {};
 
 var dnsAttempts = {};
 
+var dnsQueryInfo = {};
+
 var dnsQueryErrors = [];
+
 
 // For tests
 function resetState() {
     dnsData = {};
     dnsAttempts = {};
     dnsQueryErrors = [];
+    dnsQueryInfo = {}
 }
 
 function logMessage(...args) {
@@ -252,7 +256,7 @@ const sendDNSQuery = {};
  * used. We make sure that DoH is not used and that A records are queried,
  * rather than AAAA.
  */
-sendDNSQuery.system = async (key, domain) => {
+sendDNSQuery.webext = async (key, domain) => {
     let flags = ["bypass_cache", "disable_ipv6", "disable_trr"];
 
     try {
@@ -413,7 +417,7 @@ async function readNameservers() {
 }
 
 /**
- * @param {"udp"|"tcp"} transport
+ * @param {"udp"|"tcp"|"webext"} transport
  * @param {QueryConfig} args
  * @param {boolean} [perClient]
  * @returns {string}
@@ -450,44 +454,71 @@ function computeDomain(key, {prefix = "", perClientPrefix = "pc"}, perClient) {
     }
 }
 
-function sendQueryFactory(transport, query, nameservers_ipv4, perClient) {
-    const key = computeKey(transport, query, perClient);
-    const domain = computeDomain(key, query, perClient);
-    assert(transport in sendDNSQuery, `${transport} is not a valid transport type`);
-    let sendQuery = sendDNSQuery[transport];
-
-    return () => sendQuery(
-        key,
-        domain,
-        query,
-        nameservers_ipv4
-    );
-}
-
 /**
  * For each RR type that we have a DNS record for, attempt to send queries over
  * UDP and TCP.
  */
 async function sendQueries(nameservers_ipv4, sleep) {
-    // Add a query for our A record that uses the WebExtensions dns.resolve API as a baseline
-    let queries = [];
-    queries.push(() => sendDNSQuery.system("webext-A", APEX_DOMAIN_NAME));
-    queries.push(() => sendDNSQuery.system("webext-A-U", computeDomain("webext-A-U", {rrtype: "A"}, true)));
+    // Add queries for all transports, 1 shared 1 per client
+    let queries = [
+        { transport: "webext", perClient: false, query: { rrtype: "A" }},
+        { transport: "webext", perClient: true, query: { rrtype: "A" }},
+        { key: "webext-A-prefix", transport: "webext", perClient: false, query: { prefix: "a", rrtype: "A" }},
 
-    // Add the remaining queries that use the browser's internal socket APIs
-    for (let query of COMMON_QUERIES) {
-        queries.push(sendQueryFactory("udp", query, nameservers_ipv4));
-        queries.push(sendQueryFactory("tcp", query, nameservers_ipv4));
+        { transport: "udp", perClient: false, query: { rrtype: "A", noedns0: true }},
+        { transport: "udp", perClient: true, query: { rrtype: "A", noedns0: true }},
+        { key: "udp-A-N-prefix", transport: "udp", perClient: false, query: { prefix: "a-n", rrtype: "A", noedns0: true }},
 
-        // Queries where all clients look up a different domain
-        queries.push(sendQueryFactory("udp", query, nameservers_ipv4, true));
-        queries.push(sendQueryFactory("tcp", query, nameservers_ipv4, true));
-    }
+        { transport: "udp", perClient: false, query: {rrtype: "NEWONE"}},
+        { transport: "udp", perClient: true, query: {rrtype: "NEWONE"}},
+
+        [
+            { key: "udp-A-afirst", transport: "udp", perClient: false, query: { prefix: "aaa", rrtype: "A"}},
+            { key: "udp-NEWONE-afirst", transport: "udp", perClient: false, query: { prefix: "aaa", rrtype: "NEWONE"}}
+        ],
+        [
+            { key: "udp-A-afirst-U", transport: "udp", perClient: true, query: { prefix: "aaa", rrtype: "A"}},
+            { key: "udp-NEWONE-afirst-U", transport: "udp", perClient: true, query: { prefix: "aaa", rrtype: "NEWONE"}}
+        ],
+        [
+            { key: "udp-NEWONE-alast", transport: "udp", perClient: false, query: { prefix: "bbb", rrtype: "NEWONE"}},
+            { key: "udp-A-alast", transport: "udp", perClient: false, query: { prefix: "bbb", rrtype: "A"}}
+        ],
+        [
+            { key: "udp-NEWONE-alast-U", transport: "udp", perClient: true, query: { prefix: "bbb", rrtype: "NEWONE"}},
+            { key: "udp-A-alast-U", transport: "udp", perClient: true, query: { prefix: "bbb", rrtype: "A"}}
+        ]
+    ];
 
     // Shuffle the order of the array of queries, and then send the queries
     shuffleArray(queries);
-    for (let sendQuery of queries) {
-        await sendQuery();
+
+    // Flatten the inner arrays
+    queries = queries.flat(1);
+
+    // Reset all query state
+    resetState();
+
+    // Send each query in series
+    for (let [index, {key: customKey, transport, query, perClient}] of queries.entries()) {
+        const key = customKey || computeKey(transport, query, perClient);
+        const domain = computeDomain(key, query, perClient);
+        let sendQuery = sendDNSQuery[transport];
+
+        // Record start time, order
+        dnsQueryInfo[key] = {
+            timestamp: Date.now(),
+            order: index
+        };
+
+        // Actually send the query
+        await sendQuery(
+            key,
+            domain,
+            query,
+            nameservers_ipv4
+        )
+
         if (sleep) {
             await sleepRandom(sleep);
         }
@@ -565,6 +596,7 @@ async function runMeasurement(details, sleep) {
         measurementID,
         dnsData,
         dnsAttempts,
+        dnsQueryInfo,
         hasErrors: dnsQueryErrors.length > 0,
         dnsQueryErrors,
         addonVersion,

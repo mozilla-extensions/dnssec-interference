@@ -343,9 +343,9 @@ describe("dns-test.js", () => {
     describe("queries", () => {
         it("should send two control queries, one basic and one to the per-client domain", async () => {
             await run();
-            sinon.assert.calledTwice(sendDNSQuery.system);
-            sinon.assert.calledWithMatch(sendDNSQuery.system, "webext-A", APEX_DOMAIN_NAME);
-            sinon.assert.calledWithMatch(sendDNSQuery.system, "webext-A-U", "webext-A-U-" + FAKE_UUID + ".pc." + APEX_DOMAIN_NAME);
+            sinon.assert.calledTwice(sendDNSQuery.webext);
+            sinon.assert.calledWithMatch(sendDNSQuery.webext, "webext-A", APEX_DOMAIN_NAME);
+            sinon.assert.calledWithMatch(sendDNSQuery.webext, "webext-A-U", "webext-A-U-" + FAKE_UUID + ".pc." + APEX_DOMAIN_NAME);
         });
 
         it("should send the expected tcp and udp queries", async () => {
