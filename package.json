@@ -1,6 +1,6 @@
 {
   "name": "dnssec-interference-study",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "DNSSEC Interference Study",
   "main": "web-ext-config.js",
   "private": true,
