@@ -473,6 +473,12 @@ async function sendQueries(nameservers_ipv4, sleep) {
         { transport: "udp", perClient: false, query: {rrtype: "NEWONE"}},
         { transport: "udp", perClient: true, query: {rrtype: "NEWONE"}},
 
+        { transport: "udp", perClient: false, query: { rrtype: "DS" }},
+        { transport: "udp", perClient: false, query: { rrtype: "DS", dnssec_ok: true}},
+
+        { transport: "udp", perClient: false, query: { rrtype: "RRSIG" }},
+        { transport: "udp", perClient: true, query: { rrtype: "RRSIG" }},
+
         [
             { key: "udp-A-afirst", transport: "udp", perClient: false, query: { prefix: "aaa", rrtype: "A"}},
             { key: "udp-NEWONE-afirst", transport: "udp", perClient: false, query: { prefix: "aaa", rrtype: "NEWONE"}}
