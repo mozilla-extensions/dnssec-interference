@@ -474,7 +474,7 @@ async function sendQueries(nameservers_ipv4, sleep) {
         { key: "udp-NEWONE-alt-prefix", transport: "udp", domain: "dns-study.com", prefix: "xyz", perClient: false, query: {rrtype: "NEWONE"}},
 
         [
-            { key: "udp-A-afirst", transport: "webext", prefix: "ccc", perClient: false, query: { rrtype: "A" }},
+            { key: "webext-A-prefix", transport: "webext", prefix: "ccc", perClient: false, query: { rrtype: "A" }},
             { key: "udp-NEWONE-afirst", transport: "udp", prefix: "ccc", perClient: false, query: {rrtype: "NEWONE"}},
         ]
     ];

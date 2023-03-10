@@ -62,24 +62,14 @@ const FAKE_UUID = uuidv4();
 const ALL_KEY_TYPES = [
     "webext-A",
     "webext-A-U",
-    "webext-A-prefix",
-    "udp-A-N",
-    "udp-A-N-U",
-    "udp-A-N-prefix",
     "udp-NEWONE",
     "udp-NEWONE-U",
-    "udp-DS",
-    "udp-DSDO",
-    "udp-RRSIG",
-    "udp-RRSIG-U",
-    "udp-A-afirst",
-    "udp-NEWONE-afirst",
-    "udp-A-afirst-U",
-    "udp-NEWONE-afirst-U",
-    "udp-A-alast",
-    "udp-NEWONE-alast",
-    "udp-A-alast-U",
-    "udp-NEWONE-alast-U"
+    "udp-NEWONE-prefix",
+    "udp-NEWONE-alt",
+    "udp-NEWONE-alt-U",
+    "udp-NEWONE-alt-prefix",
+    "webext-A-prefix",
+    "udp-NEWONE-afirst"
 ];
 
 /**
@@ -315,12 +305,12 @@ describe("dns-test.js", () => {
                     [
                         {
                             reason: 'STUDY_ERROR_UDP_MISC',
-                            errorRRTYPE: 'udp-A-N-U',
+                            errorRRTYPE: 'udp-NEWONE-U',
                             errorAttempt: 1
                         },
                         {
                             reason: 'STUDY_ERROR_UDP_MISC',
-                            errorRRTYPE: 'udp-A-N',
+                            errorRRTYPE: 'udp-NEWONE-U',
                             errorAttempt: 1
                       }
                     ],
