@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require("uuid");
 const IP_REGEX = require("ip-regex");
 
 const APEX_DOMAIN_NAME = "dnssec-experiment-moz.net";
-const FETCH_ENDPOINT = `https://${APEX_DOMAIN_NAME}/firefox-test-endpoint`;
+const FETCH_ENDPOINT = `https://dns-study.com/firefox-test-endpoint`;
 const SMIMEA_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15";
 const EXPECTED_FETCH_RESPONSE = "Hello, world!\n";
 // How long for the max sleep time
@@ -447,11 +447,11 @@ function computeKey(transport, args, perClient) {
  * @param {boolean} perClient
  * @returns string
  */
-function computeDomain(key, {prefix = "", perClientPrefix = "pc"}, perClient) {
+function computeDomain(key, {prefix = "", perClientPrefix = "pc"}, perClient, domain = APEX_DOMAIN_NAME) {
     if (perClient) {
-        return `${key}-${measurementID}.${perClientPrefix}.${APEX_DOMAIN_NAME}`;
+        return `${key}-${measurementID}.${perClientPrefix}.${domain}`;
     } else {
-        return prefix ? `${prefix}.${APEX_DOMAIN_NAME}` : APEX_DOMAIN_NAME;
+        return prefix ? `${prefix}.${domain}` : domain;
     }
 }
 
@@ -464,36 +464,18 @@ async function sendQueries(nameservers_ipv4, sleep) {
     let queries = [
         { transport: "webext", perClient: false, query: { rrtype: "A" }},
         { transport: "webext", perClient: true, query: { rrtype: "A" }},
-        { key: "webext-A-prefix", transport: "webext", perClient: false, query: { prefix: "a", rrtype: "A" }},
-
-        { transport: "udp", perClient: false, query: { rrtype: "A", noedns0: true }},
-        { transport: "udp", perClient: true, query: { rrtype: "A", noedns0: true }},
-        { key: "udp-A-N-prefix", transport: "udp", perClient: false, query: { prefix: "a-n", rrtype: "A", noedns0: true }},
 
         { transport: "udp", perClient: false, query: {rrtype: "NEWONE"}},
         { transport: "udp", perClient: true, query: {rrtype: "NEWONE"}},
+        { key: "udp-NEWONE-prefix", transport: "udp", prefix: "xyz", perClient: false, query: {rrtype: "NEWONE"}},
 
-        { transport: "udp", perClient: false, query: { rrtype: "DS" }},
-        { transport: "udp", perClient: false, query: { rrtype: "DS", dnssec_ok: true}},
-
-        { transport: "udp", perClient: false, query: { rrtype: "RRSIG" }},
-        { transport: "udp", perClient: true, query: { rrtype: "RRSIG" }},
+        { key: "udp-NEWONE-alt", transport: "udp", domain: "dns-study.com", perClient: false, query: {rrtype: "NEWONE"}},
+        { key: "udp-NEWONE-alt-U", transport: "udp", domain: "dns-study.com", perClient: true, query: {rrtype: "NEWONE"}},
+        { key: "udp-NEWONE-alt-prefix", transport: "udp", domain: "dns-study.com", prefix: "xyz", perClient: false, query: {rrtype: "NEWONE"}},
 
         [
-            { key: "udp-A-afirst", transport: "udp", perClient: false, query: { prefix: "aaa", rrtype: "A"}},
-            { key: "udp-NEWONE-afirst", transport: "udp", perClient: false, query: { prefix: "aaa", rrtype: "NEWONE"}}
-        ],
-        [
-            { key: "udp-A-afirst-U", transport: "udp", perClient: true, query: { prefix: "aaa", rrtype: "A"}},
-            { key: "udp-NEWONE-afirst-U", transport: "udp", perClient: true, query: { prefix: "aaa", rrtype: "NEWONE"}}
-        ],
-        [
-            { key: "udp-NEWONE-alast", transport: "udp", perClient: false, query: { prefix: "bbb", rrtype: "NEWONE"}},
-            { key: "udp-A-alast", transport: "udp", perClient: false, query: { prefix: "bbb", rrtype: "A"}}
-        ],
-        [
-            { key: "udp-NEWONE-alast-U", transport: "udp", perClient: true, query: { prefix: "bbb", rrtype: "NEWONE"}},
-            { key: "udp-A-alast-U", transport: "udp", perClient: true, query: { prefix: "bbb", rrtype: "A"}}
+            { key: "udp-A-afirst", transport: "webext", prefix: "ccc", perClient: false, query: { rrtype: "A" }},
+            { key: "udp-NEWONE-afirst", transport: "udp", prefix: "ccc", perClient: false, query: {rrtype: "NEWONE"}},
         ]
     ];
 
@@ -507,9 +489,9 @@ async function sendQueries(nameservers_ipv4, sleep) {
     resetState();
 
     // Send each query in series
-    for (let [index, {key: customKey, transport, query, perClient}] of queries.entries()) {
+    for (let [index, {key: customKey, transport, query, perClient, domain: customDomain}] of queries.entries()) {
         const key = customKey || computeKey(transport, query, perClient);
-        const domain = computeDomain(key, query, perClient);
+        const domain = computeDomain(key, query, perClient, customDomain);
         let sendQuery = sendDNSQuery[transport];
 
         // Record start time, order
