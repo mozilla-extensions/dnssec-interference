@@ -33,9 +33,7 @@ var tcpsocket = class tcpsocket extends ExtensionAPI {
     constructor(...args) {
         super(...args);
         ExtensionCommon.defineLazyGetter(this, "TCPSocket", () => {
-            const { TCPSocket } = Cu.getGlobalForObject(
-              ChromeUtils.import("resource://gre/modules/Services.jsm")
-            );
+            const { TCPSocket } = Cu.getGlobalForObject(Services);
             return TCPSocket;
         });
         ChromeUtils.defineModuleGetter(this, "setTimeout", "resource://gre/modules/Timer.jsm");
